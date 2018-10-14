@@ -1,0 +1,11 @@
+future
+msgpack>=0.5.2
+python-rapidjson
+pyzmq>=17
+ruamel.yaml
+typing
+
+# testing
+pytest
+pytest-asyncio
+pytest-cov
