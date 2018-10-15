@@ -104,7 +104,7 @@ SemaphoreCI, but can be run locally by doing the following from within `rlwrap s
 (asdf:test-system :rpcq)
 ```
 
-There may be some instances of `SYTLE-WARNING`, but if the test run successfully,
+There may be some instances of `STYLE-WARNING`, but if the test run successfully,
 there should be something near the bottom of the output that looks like:
 
 ```
