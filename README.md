@@ -30,7 +30,7 @@ for more info).
 Using the Client-Server Framework
 ---------------------------------
 
-First, create a server, add a test handler, and spin it up.
+The following two code samples (first in Python, then in Lisp) demonstrate how to create a server, add a test handler, and spin it up.
 
 ```python
 from rpcq import Server
@@ -44,7 +44,17 @@ def test():
 server.run('tcp://*:5555')
 ```
 
-In another window, create a client that points to the same socket, and call the test method.
+```lisp
+(defun test ()
+  "test")
+
+(let ((dt (rpcq:make-dispatch-table)))
+  (rpcq:dispatch-table-add-handler dt 'test)
+  (rpcq:start-server :dispatch-table dt
+                     :listen-addresses '("tcp://*:5555")))
+```
+
+In another window, we can (again first in Python, then in Lisp) create a client that points to the same socket, and call the test method.
 
 ```python
 from rpcq import Client
@@ -54,7 +64,12 @@ client = Client('tcp://localhost:5555')
 client.call('test')
 ```
 
-This will return the string `'test'`.
+```lisp
+(rpcq:with-rpc-client (client "tcp://localhost:5555")
+  (rpcq:rpc-call client "test"))
+```
+
+In all cases (including interoperating a client/server pair written in different languages), this will return the string `'test'`.
 
 Using the Message Spec
 ----------------------

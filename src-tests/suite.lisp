@@ -69,3 +69,13 @@
     (is (string= (my-msg-str m) "a string"))
     )
   )
+
+(deftest test-serialize-deserialize ()
+  (let* ((original (make-instance 'rpcq::|RPCRequest|
+                                  :|method| "test-method"
+                                  :|params| (make-hash-table)
+                                  :|id| "test-id"))
+         (cloned (rpcq::deserialize (rpcq::serialize original))))
+    (is (typep cloned 'rpcq::|RPCRequest|))
+    (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
+    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))))
