@@ -21,5 +21,22 @@
            #:serialize
            #:deserialize
            #:clear-messages
-           #:python-message-spec))
-
+           #:python-message-spec
+           ;; RPC client/server functions
+           #:make-dispatch-table
+           #:dispatch-table-add-handler
+           #:start-server
+           #:with-rpc-client
+           #:rpc-call
+           ;; RPC client/server errors and error accessors
+           #:not-an-rpcrequest
+           #:not-an-rpcrequest-object
+           #:unknown-rpc-method
+           #:unknown-rpc-method-name
+           #:rpc-error
+           #:rpc-error-string
+           #:rpc-error-request-id
+           #:rpc-protocol-error
+           #:rpc-protocol-error-id
+           #:rpc-protocol-error-object
+           ))

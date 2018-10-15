@@ -22,11 +22,20 @@
   :depends-on (#:alexandria             ; Utilities
                #:parse-float            ; Float parsing
                #:yason                  ; JSON generation
+               ;; RPC requirements
+               #:pzmq                   ; communication layer
+               #:cl-messagepack         ; message packer
+               #:bordeaux-threads       ; threaded RPC server
+               #:local-time             ; local time for logs
+               #:unicly                 ; UUID generation
                )
   :in-order-to ((asdf:test-op (asdf:test-op #:rpcq-tests)))
   :pathname "src/"
   :serial t
   :components ((:file "package")
+               (:file "utilities")
                (:file "rpcq")
-               (:file "messages")))
+               (:file "messages")
+               (:file "server")
+               (:file "client")))
 

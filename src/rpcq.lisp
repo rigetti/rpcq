@@ -374,11 +374,13 @@ class ~A(Message):
 CoreMessages.~A = _deprecated_property(~:*~A)
 " (symbol-name msg-name))))))
 
-(defgeneric serialize (obj stream)
-  (:documentation "Serialize OBJ and append its representation to STREAM"))
-
-(defmethod serialize (obj stream)
-  (yason:encode obj stream))
+(defun serialize (obj &optional stream)
+  "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."
+  (typecase stream
+    (stream
+     (messagepack:encode-stream (%serialize obj) stream))
+    (otherwise
+     (messagepack:encode (%serialize obj)))))
 
 (defgeneric %deserialize (payload)
   (:documentation "Reconstruct objects that have already been converted to Lisp objects."))
@@ -403,8 +405,11 @@ CoreMessages.~A = _deprecated_property(~:*~A)
 
 (defun deserialize (payload)
   "Deserialize the object(s) encoded in PAYLOAD (string or stream)."
-  (%deserialize (let ((*read-default-float-format* 'double-float))
-                  (yason:parse payload :json-arrays-as-vectors t))))
+  (etypecase payload
+    (array
+     (%deserialize (messagepack:decode payload)))
+    (stream
+     (%deserialize (messagepack:decode-stream payload)))))
 
 (defun slot-type-and-initform (field-type required default)
   "Translate a FIELD-TYPE to a Lisp type and initform taking into account
@@ -559,22 +564,22 @@ We distinguish between the following options for any field type:
              (lambda (slot-name)
                `( ,(intern (symbol-name slot-name) :keyword)
                   (%deserialize (gethash ,(symbol-name slot-name) ,json))))))
-      (alexandria:with-gensyms (obj)
+      (alexandria:with-gensyms (obj hash-table)
         (let ((slot-names (mapcar #'car field-specs)))
           `(progn
              (defclass ,class-name ()
                ,(mapcar #'make-slot-spec field-specs)
                ,@(when documentation
                    `((:documentation ,(format-documentation-string documentation)))))
-
-             (defmethod yason:encode ((,obj ,class-name) &optional (stream *standard-output*))
+             
+             (defmethod %serialize ((,obj ,class-name))
                (with-slots ,slot-names ,obj
-                 (yason:with-output (stream)
-                   (yason:with-object ()
-                     (yason:encode-object-element "_type" ,(symbol-name class-name))
-                     ,@(loop :for slot :in slot-names
-                             :collect `(yason:encode-object-element ,(string-downcase (symbol-name slot))
-                                                                    ,slot))))))
+                 (let ((,hash-table (make-hash-table :test #'equal)))
+                   (setf (gethash "_type" ,hash-table) ,(symbol-name class-name))
+                   ,@(loop :for slot :in slot-names
+                           :collect `(setf (gethash ,(symbol-name slot) ,hash-table)
+                                           ,slot))
+                   ,hash-table)))
 
              (defmethod %deserialize-struct ((type (eql ',class-name)) (payload hash-table))
                (assert (string= (gethash "_type" payload) ,(symbol-name class-name)))
