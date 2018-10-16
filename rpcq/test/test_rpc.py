@@ -132,18 +132,18 @@ def test_client_timeout(server, client):
 def test_client_backlog(server, client):
     # Test 1: The call to 'add' will actually receive the response to 'sleep' so we need to make sure it will discard it
     # This should fail if you remove the while loop from Client.call
-    client.timeout = 0.1
+    client.timeout = 0.2
     with pytest.raises(TimeoutError):
-        client.call('sleep', 0.2)
-    time.sleep(0.4)
+        client.call('sleep', 0.4)
+    time.sleep(0.8)
     assert client.call('add', 1, 1) == 2
 
     # Test 2: Keep track of timeouts correctly even when the client has received a response for a different request
     # This should fail if you remove the manual elapsed time tracking from Client.call
     with pytest.raises(TimeoutError):
-        client.call('sleep', 0.18)
+        client.call('sleep', 0.28)
     with pytest.raises(TimeoutError):
-        client.call('sleep', 0.12)
+        client.call('sleep', 0.22)
 
 
 @pytest.mark.asyncio
