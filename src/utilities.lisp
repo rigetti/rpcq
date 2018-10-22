@@ -7,7 +7,7 @@
 
 (defun sanitize-name (string-designator)
   "Convert a stringifiable STRING-DESIGNATOR into a snake-case string."
-  (substitute #\_ #\- (string string-designator)))
+  (substitute #\_ #\- (string-downcase (string string-designator))))
 
 (defun str->lisp-keyword (str)
   "Convert a snake-case string into a hyphenated Lisp keyword."
