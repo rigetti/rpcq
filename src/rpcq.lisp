@@ -376,11 +376,18 @@ CoreMessages.~A = _deprecated_property(~:*~A)
 
 (defun serialize (obj &optional stream)
   "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."
-  (typecase stream
-    (stream
-     (messagepack:encode-stream (%serialize obj) stream))
-    (otherwise
-     (messagepack:encode (%serialize obj)))))
+  (let ((messagepack:*encode-alist-as-map* nil))
+    (typecase stream
+      (stream
+       (messagepack:encode-stream (%serialize obj) stream))
+      (otherwise
+       (messagepack:encode (%serialize obj))))))
+
+(defgeneric %serialize (payload)
+  (:documentation "Writes RPCQ objects into JSON-ifiable form, for further passage to msgpack."))
+
+(defmethod %serialize (payload)
+  payload)
 
 (defgeneric %deserialize (payload)
   (:documentation "Reconstruct objects that have already been converted to Lisp objects."))
@@ -389,6 +396,12 @@ CoreMessages.~A = _deprecated_property(~:*~A)
 
 (defmethod %deserialize ((payload cons))
   (loop :for elt :in payload :collect (%deserialize elt)))
+
+(defmethod %deserialize ((payload string))
+  payload)
+
+(defmethod %deserialize ((payload array))
+  (%deserialize (coerce payload 'list)))
 
 (defmethod %deserialize ((payload hash-table))
   (let ((type (gethash "_type" payload)))
@@ -578,7 +591,7 @@ We distinguish between the following options for any field type:
                    (setf (gethash "_type" ,hash-table) ,(symbol-name class-name))
                    ,@(loop :for slot :in slot-names
                            :collect `(setf (gethash ,(symbol-name slot) ,hash-table)
-                                           ,slot))
+                                           (%serialize ,slot)))
                    ,hash-table)))
 
              (defmethod %deserialize-struct ((type (eql ',class-name)) (payload hash-table))

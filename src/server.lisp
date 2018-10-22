@@ -61,8 +61,8 @@
   "Add a function F to DISPATCH-TABLE, for use by an RPCQ server.  The function F is expected to take only keyword arguments.
 
 By default, a symbol passed in for F will be automatically converted into the name of F used in the dispatch table.  To manually specify a name (or to provide a name for a non-symbol value of F), use the keyword argument :NAME."
-  (check-type f function)
   (check-type name string)
+  (alexandria:ensure-function f)
   (setf (gethash (sanitize-name name) dispatch-table) f)
   nil)
 
@@ -162,11 +162,14 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                              :object request))
                     (format-log logging-stream "Got request: ~a" (|RPCRequest-method| request))
                     
-                    (let ((params-as-plist
-                            (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
-                                  :using (hash-value val)
-                                  :collect (str->lisp-keyword key)
-                                  :collect val)))
+                    (let ((kwargs-as-plist
+                            (if (gethash "**kwargs" (|RPCRequest-params| request))
+                                (loop :for key :being :the :hash-keys :of (gethash "**kwargs" (|RPCRequest-params| request))
+                                        :using (hash-value val)
+                                      :collect (str->lisp-keyword key)
+                                      :collect val)
+                                nil))
+                          (args-as-list (gethash "*args" (|RPCRequest-params| request))))
                       (let ((f (gethash (|RPCRequest-method| request) dispatch-table)))
                         (unless f
                           (error 'unknown-rpc-method
@@ -175,8 +178,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                           (setf result 
                                 (if timeout
                                     (bt:with-timeout (timeout)
-                                      (apply f params-as-plist))
-                                    (apply f params-as-plist))))
+                                      (apply f (append args-as-list kwargs-as-plist)))
+                                    (apply f (append args-as-list kwargs-as-plist)))))
                         
                         (setf reply (make-instance '|RPCReply|
                                                    :|id| (|RPCRequest-id| request)
