@@ -64,7 +64,11 @@ class Client:
         :param args: Args that will be passed to the remote function
         :param kwargs: Keyword args that will be passed to the remote function
         """
-        if self.timeout:
+        if 'program_duration' in kwargs and kwargs['program_duration']:
+            timeout = kwargs['program_duration']
+        else:
+            timeout = self.timeout
+        if timeout:
             # Implementation note: this simply wraps the call in a timeout and converts to the built-in TimeoutError
             try:
                 return await asyncio.wait_for(self._call_async(method_name, *args, **kwargs), timeout=self.timeout)
