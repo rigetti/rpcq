@@ -39,7 +39,6 @@ class Client:
         Create a client that connects to a server at <endpoint>.
 
         :param str endpoint: Socket endpoint, e.g. "tcp://localhost:1234"
-        :param float timeout: Timeout in seconds for Server response, set to None to disable the timeout
         """
         self.timeout = DEFAULT_TIMEOUT
         self.endpoint = endpoint
