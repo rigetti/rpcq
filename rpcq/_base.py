@@ -13,11 +13,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 ##############################################################################
+
 import rapidjson
-from copy import deepcopy
-from ruamel import yaml
 
 import msgpack
+from dataclasses import astuple, replace, fields, MISSING
+from ruamel import yaml
 
 REPR_LIST_TRUNCATION = 10
 "Number of list elements to print when calling repr on a Message with a list field."
@@ -42,47 +43,10 @@ class UnknownMessageType(Exception):
     """Raised when trying to decode an unknown message type."""
 
 
-class Message(object):
+class Message:
     """
     Base class for messages.
     """
-
-    def __repr__(self):
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(k, repr_value(v))
-                      for k, v in sorted(self.asdict().items(), key=lambda kv: kv[0])))
-
-    def __getitem__(self, item):
-        return self.asdict()[item]
-
-    def items(self):
-        return self.asdict().items()
-
-    def get(self, key, default):
-        return self.asdict().get(key, default)
-
-    def __eq__(self, other):
-        return type(self) == type(other) and self.astuple() == other.astuple()
-
-    def __copy__(self):
-        return self.__class__(**self.asdict())
-
-    def __deepcopy__(self, memo):
-        ret = self.__class__(**deepcopy(self.asdict(), memo=memo))
-        memo[id(self)] = ret
-        return ret
-
-    def copy(self, **kwargs):
-        """
-        Create a copy with (optionally) substituted values.
-
-        :param kwargs: Any fields that should be substituted.
-        :return: A new message object of the same class.
-        """
-        values = self.asdict()
-        values.update(kwargs)
-        return self.__class__(**values)
 
     def asdict(self):
         """
@@ -91,19 +55,15 @@ class Message(object):
         :return: A dictionary representation of the message.
         :rtype: Dict[str,Any]
         """
-        raise NotImplementedError(self.__class__.__name__)
+        return self.__dict__.copy()
 
     def astuple(self):
         """
         Create a tuple ``{fieldvalue1, ...}`` of the Message object.
-
-        :return: A tuple representation of the message.
+         :return: A tuple representation of the message.
         :rtype: Tuple[Any]
         """
-        raise NotImplementedError(self.__class__.__name__)
-
-    def __hash__(self):
-        return hash((self.__class__, self.astuple()))
+        return tuple(getattr(self, f.name) for f in fields(self))
 
     def replace(self, **kwargs):
         """
@@ -113,9 +73,33 @@ class Message(object):
         :param kwargs: The replaced fields.
         :return: A copy of self.
         """
-        d = self.asdict()
-        d.update(kwargs)
-        return type(self)(**d)
+        return replace(self, **kwargs)
+
+    def _extend_by_deprecated_fields(self, d):
+        pass
+
+    copy = replace
+
+    def items(self):
+        return self.__dict__.items()
+
+    def get(self, key, default):
+        return self.__dict__.get(key, default)
+
+    def __getitem__(self, item):
+        return self.__dict__[item]
+
+    def __repr__(self):
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(k, repr_value(v))
+                      for k, v in sorted(self.asdict().items(), key=lambda kv: kv[0])))
+
+    def __eq__(self, other):
+        return type(self) == type(other) and astuple(self) == astuple(other)
+
+    def __hash__(self):
+        return hash((self.__class__, astuple(self)))
 
     _types = None
 
@@ -128,13 +112,19 @@ class Message(object):
         :rtype: Dict[str,type]
         """
         if Message._types is None:
-            Message._types = {c.__name__: c for c in Message.__subclasses__()}
+            Message._types = {}
+            classes_to_process = [Message]
+            while classes_to_process:
+                atom = classes_to_process.pop()
+                classes_to_process += atom.__subclasses__()
+                Message._types[atom.__name__] = atom
         return Message._types
 
 
 def _default(obj):
     if isinstance(obj, Message):
-        d = obj.asdict()
+        d = obj.__dict__
+        obj._extend_by_deprecated_fields(d)
         d["_type"] = obj.__class__.__name__
         return d
     else:
@@ -144,7 +134,8 @@ def _default(obj):
 def _object_hook(obj):
     if '_type' in obj:
         try:
-            msg_type = Message.types()[obj["_type"]]
+            class_dict = Message.types()
+            msg_type = class_dict[obj['_type']]
         except KeyError:  # pragma no coverage
             raise UnknownMessageType("The message type {} is unknown".format(obj["_type"]))
 

@@ -35,6 +35,7 @@
   :components ((:file "package")
                (:file "utilities")
                (:file "rpcq")
+               (:file "rpcq-python")
                (:file "messages")
                (:file "server")
                (:file "client")))
