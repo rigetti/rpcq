@@ -27,19 +27,21 @@ from rpcq.messages import RPCError, RPCReply
 
 _log = logging.getLogger(__name__)
 
+DEFAULT_TIMEOUT = 20_000  # ms
+
 
 class Client:
     """
     Client that executes methods on a remote server by sending JSON RPC requests to a socket.
     """
-    def __init__(self, endpoint: str, timeout: float = None):
+    def __init__(self, endpoint: str):
         """
         Create a client that connects to a server at <endpoint>.
 
         :param str endpoint: Socket endpoint, e.g. "tcp://localhost:1234"
         :param float timeout: Timeout in seconds for Server response, set to None to disable the timeout
         """
-        self.timeout = timeout
+        self.timeout = DEFAULT_TIMEOUT
         self.endpoint = endpoint
 
         self._socket = self._connect_to_socket(zmq.Context(), endpoint)
@@ -56,22 +58,21 @@ class Client:
         # Cache of replies so that different tasks can share results with each other
         self._replies: Dict[str, Union[RPCReply, RPCError]] = {}
 
-    async def call_async(self, method_name: str, *args, **kwargs):
+    async def call_async(self, method_name: str, timeout: float = None, *args, **kwargs):
         """
         Send JSON RPC request to a backend socket and receive reply (asynchronously)
 
         :param method_name: Method name
+        :param float timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param args: Args that will be passed to the remote function
         :param kwargs: Keyword args that will be passed to the remote function
         """
-        if 'program_duration' in kwargs and kwargs['program_duration']:
-            timeout = kwargs['program_duration']
-        else:
+        if not timeout:
             timeout = self.timeout
         if timeout:
             # Implementation note: this simply wraps the call in a timeout and converts to the built-in TimeoutError
             try:
-                return await asyncio.wait_for(self._call_async(method_name, *args, **kwargs), timeout=self.timeout)
+                return await asyncio.wait_for(self._call_async(method_name, *args, **kwargs), timeout=timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Timeout on client {self.endpoint}, method name {method_name}, class info: {self}")
         else:
