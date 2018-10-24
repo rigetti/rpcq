@@ -73,8 +73,7 @@ class RPCSpec(object):
         :return:
         """
         if f.__name__.startswith('rpc_'):
-            raise ValueError("Server method names can't start with rpc_. This is reserved for rpc_timeout param "
-                             "in the client. ")
+            raise ValueError("Server method names cannot start with rpc_.")
         self._json_rpc_methods[f.__name__] = f
         return f
 
