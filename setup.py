@@ -22,6 +22,10 @@ with open('VERSION.txt', 'r') as f:
 with open('README.md', 'r') as f:
     long_description = f.read()
 
+# save the source code in version.py
+with open('rpcq/version.py', 'r') as f:
+    version_file_source = f.read()
+
 # overwrite version.py in the source distribution
 with open('rpcq/version.py', 'w') as f:
     f.write(f'__version__ = \'{__version__}\'\n')
@@ -49,3 +53,7 @@ setup(
     keywords='quantum rpc qcs',
     python_requires='>=3.5',
 )
+
+# restore version.py to its previous state
+with open('rpcq/version.py', 'w') as f:
+    f.write(version_file_source)
