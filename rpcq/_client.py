@@ -39,7 +39,9 @@ class Client:
         :param str endpoint: Socket endpoint, e.g. "tcp://localhost:1234"
         :param float timeout: Timeout in seconds for Server response, set to None to disable the timeout
         """
+        # TODO: leaving self.timeout for backwards compatibility; we should move towards using rpc_timeout only
         self.timeout = timeout
+        self.rpc_timeout = timeout
         self.endpoint = endpoint
 
         self._socket = self._connect_to_socket(zmq.Context(), endpoint)
@@ -56,18 +58,36 @@ class Client:
         # Cache of replies so that different tasks can share results with each other
         self._replies: Dict[str, Union[RPCReply, RPCError]] = {}
 
-    async def call_async(self, method_name: str, *args, **kwargs):
+    def __setattr__(self, key, value):
+        """
+        Ensure rpc_timeout attribute gets update with timeout. Currently keeping self.timeout and
+        self.rpc_timeout for backwards compatibility. We should move towards using rpc_timeout only.
+
+        :param key: attribute key
+        :param value: attribute value
+        :return:
+        """
+        if key == 'timeout':
+            self.rpc_timeout = value
+        super().__setattr__(key, value)
+
+    async def call_async(self, method_name: str, *args, rpc_timeout: float = None, **kwargs):
         """
         Send JSON RPC request to a backend socket and receive reply (asynchronously)
 
         :param method_name: Method name
         :param args: Args that will be passed to the remote function
+        :param float rpc_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
-        if self.timeout:
+        # if an rpc_timeout override is not specified, use the one set in the Client attributes
+        if rpc_timeout is None:
+            rpc_timeout = self.rpc_timeout
+
+        if rpc_timeout:
             # Implementation note: this simply wraps the call in a timeout and converts to the built-in TimeoutError
             try:
-                return await asyncio.wait_for(self._call_async(method_name, *args, **kwargs), timeout=self.timeout)
+                return await asyncio.wait_for(self._call_async(method_name, *args, **kwargs), timeout=rpc_timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Timeout on client {self.endpoint}, method name {method_name}, class info: {self}")
         else:
@@ -111,7 +131,7 @@ class Client:
         self._replies[reply.id] = reply
         self._events.pop(reply.id).set()
 
-    def call(self, method_name: str, *args, **kwargs):
+    def call(self, method_name: str, *args, rpc_timeout: float = None, **kwargs):
         """
         Send JSON RPC request to a backend socket and receive reply
         Note that this uses the default event loop to run in a blocking manner. If you would rather run in an async
@@ -119,6 +139,7 @@ class Client:
 
         :param method_name: Method name
         :param args: Args that will be passed to the remote function
+        :param float rpc_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
         request = rpc_request(method_name, *args, **kwargs)
@@ -126,12 +147,16 @@ class Client:
 
         self._socket.send_multipart([to_msgpack(request)])
 
+        # if an rpc_timeout override is not specified, use the one set in the Client attributes
+        if rpc_timeout is None:
+            rpc_timeout = self.rpc_timeout
+
         start_time = time.time()
         while True:
             # Need to keep track of timeout manually in case this loop runs more than once. We subtract off already
             # elapsed time from the timeout. The call to max is to make sure we don't send a negative value
             # which would throw an error.
-            timeout = max((start_time + self.timeout - time.time()) * 1000, 0) if self.timeout is not None else None
+            timeout = max((start_time + rpc_timeout - time.time()) * 1000, 0) if rpc_timeout is not None else None
             if self._socket.poll(timeout) == 0:
                 raise TimeoutError(f"Timeout on client {self.endpoint}, method name {method_name}, class info: {self}")
 

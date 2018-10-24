@@ -72,6 +72,8 @@ class RPCSpec(object):
         :param callable f: Method to be exposed
         :return:
         """
+        if f.__name__.startswith('rpc_'):
+            raise ValueError("Server method names cannot start with rpc_.")
         self._json_rpc_methods[f.__name__] = f
         return f
 
