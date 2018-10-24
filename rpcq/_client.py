@@ -56,13 +56,13 @@ class Client:
         # Cache of replies so that different tasks can share results with each other
         self._replies: Dict[str, Union[RPCReply, RPCError]] = {}
 
-    async def call_async(self, method_name: str, rpcq_timeout: float = None, *args, **kwargs):
+    async def call_async(self, method_name: str, *args, rpcq_timeout: float = None, **kwargs):
         """
         Send JSON RPC request to a backend socket and receive reply (asynchronously)
 
         :param method_name: Method name
-        :param float rpcq_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param args: Args that will be passed to the remote function
+        :param float rpcq_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
         if rpcq_timeout is not None:
@@ -114,15 +114,15 @@ class Client:
         self._replies[reply.id] = reply
         self._events.pop(reply.id).set()
 
-    def call(self, method_name: str, rpcq_timeout: float = None, *args, **kwargs):
+    def call(self, method_name: str, *args, rpcq_timeout: float = None, **kwargs):
         """
         Send JSON RPC request to a backend socket and receive reply
         Note that this uses the default event loop to run in a blocking manner. If you would rather run in an async
         fashion or provide your own event loop then use .async_call instead
 
         :param method_name: Method name
-        :param float rpcq_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param args: Args that will be passed to the remote function
+        :param float rpcq_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
         request = rpc_request(method_name, *args, **kwargs)
