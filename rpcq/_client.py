@@ -80,8 +80,10 @@ class Client:
         :param float rpc_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
-        if rpc_timeout is not None:
+        # if an rpc_timeout override is not specified, use the one set in the Client attributes
+        if rpc_timeout is None:
             rpc_timeout = self.rpc_timeout
+
         if rpc_timeout:
             # Implementation note: this simply wraps the call in a timeout and converts to the built-in TimeoutError
             try:
@@ -144,8 +146,11 @@ class Client:
         _log.debug("Sending request: %s", request)
 
         self._socket.send_multipart([to_msgpack(request)])
-        if rpc_timeout is not None:
+
+        # if an rpc_timeout override is not specified, use the one set in the Client attributes
+        if rpc_timeout is None:
             rpc_timeout = self.rpc_timeout
+
         start_time = time.time()
         while True:
             # Need to keep track of timeout manually in case this loop runs more than once. We subtract off already
