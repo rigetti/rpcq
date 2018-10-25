@@ -65,18 +65,23 @@
 
 
 (defun prepare-rpc-call-args (args)
-  (let ((**kwargs (make-hash-table :test #'equal)))
-    (loop :for arg :in args
-          :for rest := args :then (rest rest)
-          :if (typep arg 'keyword)
-            :return  (progn
-                       (loop :for (key val) :on rest :by #'cddr :while val
-                             :do (setf (gethash (sanitize-name key) hash-table) val))
-                       (alexandria:plist-hash-table (list "*args" *args
-                                                          "**kwargs" **kwargs)
-                                                    :test #'equal))
-          :else
-            :collect arg :into *args)))
+  (cond
+    ((null args)
+     (alexandria:plist-hash-table (list "*args" '()
+                                        "**kwargs" (make-hash-table :test #'equal))))
+    (t
+     (let ((**kwargs (make-hash-table :test #'equal)))
+       (loop :for arg :in args
+             :for rest := args :then (rest rest)
+             :if (keywordp arg)
+               :return (progn
+                         (loop :for (key val) :on rest :by #'cddr :while val
+                               :do (setf (gethash (sanitize-name key) **kwargs) val))
+                         (alexandria:plist-hash-table (list "*args" *args
+                                                            "**kwargs" **kwargs)
+                                                      :test #'equal))
+             :else
+               :collect arg :into *args)))))
 
 (defun rpc-call (client call &rest args)
   "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
