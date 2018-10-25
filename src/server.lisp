@@ -62,7 +62,8 @@
 
 By default, a symbol passed in for F will be automatically converted into the name of F used in the dispatch table.  To manually specify a name (or to provide a name for a non-symbol value of F), use the keyword argument :NAME."
   (check-type name string)
-  (alexandria:ensure-function f)
+  (unless (global-function-p f)
+    (warn "The symbol ~S doesn't name a global function." f))
   (setf (gethash (sanitize-name name) dispatch-table) f)
   nil)
 
@@ -153,7 +154,6 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
           (let (request result reply)
             (multiple-value-bind (identity empty-frame raw-request)
                 (%pull-raw-request receiver)
-              
               (handler-case
                   (progn
                     (setf request (deserialize raw-request))

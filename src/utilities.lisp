@@ -21,3 +21,10 @@
   "Converts a foreign array of unsigned characters to a Lisp vector of such."
   (cffi:foreign-array-to-lisp (pzmq:msg-data msg)
                               `(:array :uint8 ,(pzmq:msg-size msg))))
+
+(defun global-function-p (symbol)
+  "Return true if SYMBOL names a global function. Return false if it doesn't."
+  (check-type symbol symbol)
+  (and (fboundp symbol)
+       (not (macro-function symbol))
+       (not (special-operator-p symbol))))
