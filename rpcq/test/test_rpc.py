@@ -26,7 +26,7 @@ import zmq
 from rpcq._base import to_msgpack, from_msgpack
 from rpcq._server import Server
 from rpcq._client import Client
-from rpcq._utils import rpc_request, RPCErrorError
+from rpcq._utils import rpc_request, RPCErrorError, RPCError
 
 # Set up logging for easier debugging of test failures, but disable logging any exceptions thrown in the mock server
 # since those are expected
@@ -108,14 +108,28 @@ def client(request, m_endpoints):
     return client
 
 
-def test_client(server, client):
+def test_client_rpcerrorerror(server, client):
     assert client.call('add', 1, 1) == 2
     assert client.call('foo') == 'bar'
-    with pytest.raises(RPCErrorError):
+    with pytest.raises(RPCErrorError):  # RPCErrorError is deprecated
         client.call('non_existent_method')
     try:
         client.call('raise_error')
-    except RPCErrorError as e:
+    except RPCErrorError as e:  # RPCErrorError is deprecated
+        # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
+        full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
+        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert 'ValueError: Oops.' in full_traceback
+
+
+def test_client(server, client):
+    assert client.call('add', 1, 1) == 2
+    assert client.call('foo') == 'bar'
+    with pytest.raises(RPCError):
+        client.call('non_existent_method')
+    try:
+        client.call('raise_error')
+    except RPCError as e:
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
         assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
@@ -147,13 +161,29 @@ def test_client_backlog(server, client):
 
 
 @pytest.mark.asyncio
-async def test_async_client(server, client):
+async def test_async_client_rpcerrorerror(server, client):
     reply = await client.call_async('foo')
-    with pytest.raises(RPCErrorError):
+    with pytest.raises(RPCErrorError):  # RPCErrorError is deprecated
         await client.call_async('non_existent_method')
     try:
         await client.call_async('raise_error')
-    except RPCErrorError as e:
+    except RPCErrorError as e:  # RPCErrorError is deprecated
+        # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
+        full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
+        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert 'ValueError: Oops.' in full_traceback
+
+    assert reply == "bar"
+
+
+@pytest.mark.asyncio
+async def test_async_client(server, client):
+    reply = await client.call_async('foo')
+    with pytest.raises(RPCError):
+        await client.call_async('non_existent_method')
+    try:
+        await client.call_async('raise_error')
+    except RPCError as e:
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
         assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback

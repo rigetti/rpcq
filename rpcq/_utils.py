@@ -15,6 +15,7 @@
 ##############################################################################
 """Utils for message passing"""
 import uuid
+import warnings
 from typing import Optional, Tuple, Union
 
 from rpcq.messages import RPCRequest, RPCReply, RPCError
@@ -91,6 +92,17 @@ def get_input(params: Union[dict, list]) -> Tuple[list, dict]:
 
 
 class RPCErrorError(IOError):
+    """JSON RPC error that is raised by a Client when it receives an RPCError message"""
+
+    def __init__(self, *args, **kwargs):
+        if type(self) is RPCErrorError:
+            warnings.warn("`RPCErrorError` is deprecated in favor of the "
+                          "less-loquacious `RPCError`.", DeprecationWarning)
+
+        super().__init__(*args, **kwargs)
+
+
+class RPCError(RPCErrorError):
     """JSON RPC error that is raised by a Client when it receives an RPCError message"""
 
 
