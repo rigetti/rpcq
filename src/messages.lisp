@@ -159,6 +159,11 @@
      (|seed|
       :documentation "PRNG seed. Set this to guarantee repeatable results."
       :type :integer
+      :required nil)
+
+     (|interleaver|
+      :documentation "Fixed Clifford, specified as a Quil string, to interleave through an RB sequence."
+      :type :string
       :required nil))
 
   :documentation "RPC request payload for generating a randomized benchmarking sequence.")

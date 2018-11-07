@@ -472,6 +472,7 @@ class RandomizedBenchmarkingRequest(Message):
         'qubits',
         'gateset',
         'seed',
+        'interleaver',
     )
 
     def asdict(self):
@@ -480,7 +481,8 @@ class RandomizedBenchmarkingRequest(Message):
             'depth': self.depth,
             'qubits': self.qubits,
             'gateset': self.gateset,
-            'seed': self.seed
+            'seed': self.seed,
+            'interleaver': self.interleaver
         }
 
     def astuple(self):
@@ -489,7 +491,8 @@ class RandomizedBenchmarkingRequest(Message):
             self.depth,
             self.qubits,
             self.gateset,
-            self.seed
+            self.seed,
+            self.interleaver
         )
 
     def __init__(self,
@@ -497,8 +500,9 @@ class RandomizedBenchmarkingRequest(Message):
                  qubits,
                  gateset,
                  seed=None,
+                 interleaver=None,
                  **kwargs):
-        # type: (int, int, List[str], Optional[int]) -> None
+        # type: (int, int, List[str], Optional[int], Optional[str]) -> None
 
         if kwargs:
             warnings.warn(("Message {} ignoring unexpected keyword arguments: "
@@ -525,6 +529,9 @@ class RandomizedBenchmarkingRequest(Message):
         if not (seed is None or isinstance(seed, int)):
             raise TypeError("Parameter seed must be of type int, "
                             + "but object of type {} given".format(type(seed)))
+        if not (interleaver is None or isinstance(interleaver, basestring)):
+            raise TypeError("Parameter interleaver must be of type basestring, "
+                            + "but object of type {} given".format(type(interleaver)))
 
         self.depth = depth  # type: int
         """Depth of the benchmarking sequence."""
@@ -537,6 +544,9 @@ class RandomizedBenchmarkingRequest(Message):
 
         self.seed = seed  # type: Optional[int]
         """PRNG seed. Set this to guarantee repeatable results."""
+
+        self.interleaver = interleaver  # type: Optional[str]
+        """Fixed Clifford, specified as a Quil string, to interleave through an RB sequence."""
 
 CoreMessages.RandomizedBenchmarkingRequest = _deprecated_property(RandomizedBenchmarkingRequest)
 
@@ -1084,7 +1094,7 @@ class BinaryExecutableResponse(Message):
 CoreMessages.BinaryExecutableResponse = _deprecated_property(BinaryExecutableResponse)
 
 class PyQuilExecutableResponse(Message):
-    """Pidgin-serializable form of a pyQuil Program object."""
+    """rpcQ-serializable form of a pyQuil Program object."""
 
     # fix slots
     __slots__ = (
