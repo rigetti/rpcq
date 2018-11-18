@@ -276,6 +276,30 @@
       :required nil))
   :documentation "Native Quil and associated metadata returned from quilc.")
 
+(defmessage |RewriteArithmeticRequest|
+    ((|program|
+      :documentation ""
+      :type :string
+      :required t))
+  :documentation "")
+
+(defmessage |RewriteArithmeticReponse|
+    ((|program|
+      :documentation ""
+      :type :string
+      :required t)
+
+     (|original_memory_descriptors|
+      :documentation ""
+      :type (:list :any)
+      :required nil)
+
+     (|recalculation_table|
+      :documentation ""
+      :type (:map :any)
+      :required nil))
+  :documentation "")
+
 (defmessage |BinaryExecutableRequest|
     ((|quil|
       :documentation "Native Quil to be translated into an executable program."
