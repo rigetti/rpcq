@@ -291,12 +291,12 @@
 
      (|original_memory_descriptors|
       :documentation "The declared memory descriptors in the Quil of the related request."
-      :type (:list :any)
+      :type (:list |ParameterSpec|)
       :required nil)
 
      (|recalculation_table|
       :documentation "A mapping from memory references to the original gate arithmetic."
-      :type (:map :any)
+      :type (:map |ParameterAref| -> :string)
       :required nil))
   :documentation "The data needed to run programs with gate arithmetic on the hardware.")
 
