@@ -969,6 +969,118 @@ class NativeQuilResponse(Message):
 
 CoreMessages.NativeQuilResponse = _deprecated_property(NativeQuilResponse)
 
+class RewriteArithmeticRequest(Message):
+    """A request type to handle compiling arithmetic out of gate parameters."""
+
+    # fix slots
+    __slots__ = (
+        'quil',
+    )
+
+    def asdict(self):
+        """Generate dictionary representation of self."""
+        return {
+            'quil': self.quil
+        }
+
+    def astuple(self):
+        """Generate tuple representation of self."""
+        return (
+            self.quil
+        )
+
+    def __init__(self,
+                 quil,
+                 **kwargs):
+        # type: (str) -> None
+
+        if kwargs:
+            warnings.warn(("Message {} ignoring unexpected keyword arguments: "
+                    "{}.").format(self.__class__.__name__, ", ".join(kwargs.keys())))
+
+        # check presence of required fields
+        if quil is None:
+            raise ValueError("The field 'quil' cannot be None")
+
+        # verify types
+        if not isinstance(quil, basestring):
+            raise TypeError("Parameter quil must be of type basestring, "
+                            + "but object of type {} given".format(type(quil)))
+
+        self.quil = quil  # type: str
+        """Native Quil for which to rewrite arithmetic parameters."""
+
+CoreMessages.RewriteArithmeticRequest = _deprecated_property(RewriteArithmeticRequest)
+
+class RewriteArithmeticReponse(Message):
+    """The data needed to run programs with gate arithmetic on the hardware."""
+
+    # fix slots
+    __slots__ = (
+        'quil',
+        'original_memory_descriptors',
+        'recalculation_table',
+    )
+
+    def asdict(self):
+        """Generate dictionary representation of self."""
+        return {
+            'quil': self.quil,
+            'original_memory_descriptors': self.original_memory_descriptors,
+            'recalculation_table': self.recalculation_table
+        }
+
+    def astuple(self):
+        """Generate tuple representation of self."""
+        return (
+            self.quil,
+            self.original_memory_descriptors,
+            self.recalculation_table
+        )
+
+    def __init__(self,
+                 quil,
+                 original_memory_descriptors=None,
+                 recalculation_table=None,
+                 **kwargs):
+        # type: (str, Dict[str,ParameterSpec], Dict[ParameterAref,str]) -> None
+
+        if kwargs:
+            warnings.warn(("Message {} ignoring unexpected keyword arguments: "
+                    "{}.").format(self.__class__.__name__, ", ".join(kwargs.keys())))
+
+        # initialize default values of collections
+        if original_memory_descriptors is None:
+            original_memory_descriptors = {}
+        if recalculation_table is None:
+            recalculation_table = {}
+
+        # check presence of required fields
+        if quil is None:
+            raise ValueError("The field 'quil' cannot be None")
+
+        # verify types
+        if not isinstance(quil, basestring):
+            raise TypeError("Parameter quil must be of type basestring, "
+                            + "but object of type {} given".format(type(quil)))
+        if not (original_memory_descriptors is None or isinstance(original_memory_descriptors, dict)):
+            raise TypeError("Parameter original_memory_descriptors must be of type dict, "
+                            + "but object of type {} given".format(type(original_memory_descriptors)))
+        if not (recalculation_table is None or isinstance(recalculation_table, dict)):
+            raise TypeError("Parameter recalculation_table must be of type dict, "
+                            + "but object of type {} given".format(type(recalculation_table)))
+
+        self.quil = quil  # type: str
+        """Native Quil rewritten with no arithmetic in gate parameters."""
+
+        self.original_memory_descriptors = original_memory_descriptors  # type: Dict[str,ParameterSpec]
+        """The declared memory descriptors in the Quil of the related request."""
+
+        self.recalculation_table = recalculation_table  # type: Dict[ParameterAref,str]
+        """A mapping from memory references to the original gate arithmetic."""
+
+CoreMessages.RewriteArithmeticReponse = _deprecated_property(RewriteArithmeticReponse)
+
 class BinaryExecutableRequest(Message):
     """Native Quil and the information needed to create binary executables."""
 
@@ -1031,6 +1143,7 @@ class BinaryExecutableResponse(Message):
     __slots__ = (
         'program',
         'memory_descriptors',
+        'recalculation_table',
         'ro_sources',
     )
 
@@ -1039,6 +1152,7 @@ class BinaryExecutableResponse(Message):
         return {
             'program': self.program,
             'memory_descriptors': self.memory_descriptors,
+            'recalculation_table': self.recalculation_table,
             'ro_sources': self.ro_sources
         }
 
@@ -1047,15 +1161,17 @@ class BinaryExecutableResponse(Message):
         return (
             self.program,
             self.memory_descriptors,
+            self.recalculation_table,
             self.ro_sources
         )
 
     def __init__(self,
                  program,
                  memory_descriptors=None,
+                 recalculation_table=None,
                  ro_sources=None,
                  **kwargs):
-        # type: (str, Dict[str,ParameterSpec], List[object]) -> None
+        # type: (str, Dict[str,ParameterSpec], Dict[ParameterAref,str], List[object]) -> None
 
         if kwargs:
             warnings.warn(("Message {} ignoring unexpected keyword arguments: "
@@ -1064,6 +1180,8 @@ class BinaryExecutableResponse(Message):
         # initialize default values of collections
         if memory_descriptors is None:
             memory_descriptors = {}
+        if recalculation_table is None:
+            recalculation_table = {}
         if ro_sources is None:
             ro_sources = []
 
@@ -1078,6 +1196,9 @@ class BinaryExecutableResponse(Message):
         if not (memory_descriptors is None or isinstance(memory_descriptors, dict)):
             raise TypeError("Parameter memory_descriptors must be of type dict, "
                             + "but object of type {} given".format(type(memory_descriptors)))
+        if not (recalculation_table is None or isinstance(recalculation_table, dict)):
+            raise TypeError("Parameter recalculation_table must be of type dict, "
+                            + "but object of type {} given".format(type(recalculation_table)))
         if not (ro_sources is None or isinstance(ro_sources, list)):
             raise TypeError("Parameter ro_sources must be of type list, "
                             + "but object of type {} given".format(type(ro_sources)))
@@ -1087,6 +1208,9 @@ class BinaryExecutableResponse(Message):
 
         self.memory_descriptors = memory_descriptors  # type: Dict[str,ParameterSpec]
         """Internal field for constructing patch tables."""
+
+        self.recalculation_table = recalculation_table  # type: Dict[ParameterAref,str]
+        """A mapping from memory references to the original gate arithmetic."""
 
         self.ro_sources = ro_sources  # type: List[object]
         """Internal field for reshaping returned buffers."""
