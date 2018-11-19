@@ -324,6 +324,11 @@
       :required nil
       :default nil)
 
+     (|recalculation_table|
+      :documentation "A mapping from memory references to the original gate arithmetic."
+      :type (:map :any)
+      :required nil)
+
      (|ro_sources|
       :documentation "Internal field for reshaping returned buffers."
       :type (:list :any)
