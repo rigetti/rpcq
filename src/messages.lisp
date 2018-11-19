@@ -283,7 +283,7 @@
       :required t))
   :documentation "A request type to handle compiling arithmetic out of gate parameters.")
 
-(defmessage |RewriteArithmeticReponse|
+(defmessage |RewriteArithmeticResponse|
     ((|quil|
       :documentation "Native Quil rewritten with no arithmetic in gate parameters."
       :type :string

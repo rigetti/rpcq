@@ -1012,7 +1012,7 @@ class RewriteArithmeticRequest(Message):
 
 CoreMessages.RewriteArithmeticRequest = _deprecated_property(RewriteArithmeticRequest)
 
-class RewriteArithmeticReponse(Message):
+class RewriteArithmeticResponse(Message):
     """The data needed to run programs with gate arithmetic on the hardware."""
 
     # fix slots
@@ -1079,7 +1079,7 @@ class RewriteArithmeticReponse(Message):
         self.recalculation_table = recalculation_table  # type: Dict[ParameterAref,str]
         """A mapping from memory references to the original gate arithmetic."""
 
-CoreMessages.RewriteArithmeticReponse = _deprecated_property(RewriteArithmeticReponse)
+CoreMessages.RewriteArithmeticResponse = _deprecated_property(RewriteArithmeticResponse)
 
 class BinaryExecutableRequest(Message):
     """Native Quil and the information needed to create binary executables."""
