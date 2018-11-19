@@ -326,7 +326,7 @@
 
      (|recalculation_table|
       :documentation "A mapping from memory references to the original gate arithmetic."
-      :type (:map :any)
+      :type (:map |ParameterAref| -> :string)
       :required nil)
 
      (|ro_sources|
