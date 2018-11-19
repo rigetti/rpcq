@@ -291,7 +291,7 @@
 
      (|original_memory_descriptors|
       :documentation "The declared memory descriptors in the Quil of the related request."
-      :type (:list |ParameterSpec|)
+      :type (:map :string -> |ParameterSpec|)
       :required nil)
 
      (|recalculation_table|
