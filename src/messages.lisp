@@ -276,6 +276,30 @@
       :required nil))
   :documentation "Native Quil and associated metadata returned from quilc.")
 
+(defmessage |RewriteArithmeticRequest|
+    ((|quil|
+      :documentation "Native Quil for which to rewrite arithmetic parameters."
+      :type :string
+      :required t))
+  :documentation "A request type to handle compiling arithmetic out of gate parameters.")
+
+(defmessage |RewriteArithmeticResponse|
+    ((|quil|
+      :documentation "Native Quil rewritten with no arithmetic in gate parameters."
+      :type :string
+      :required t)
+
+     (|original_memory_descriptors|
+      :documentation "The declared memory descriptors in the Quil of the related request."
+      :type (:map :string -> |ParameterSpec|)
+      :required nil)
+
+     (|recalculation_table|
+      :documentation "A mapping from memory references to the original gate arithmetic."
+      :type (:map |ParameterAref| -> :string)
+      :required nil))
+  :documentation "The data needed to run programs with gate arithmetic on the hardware.")
+
 (defmessage |BinaryExecutableRequest|
     ((|quil|
       :documentation "Native Quil to be translated into an executable program."
@@ -299,6 +323,11 @@
       :type (:map :string -> |ParameterSpec|)
       :required nil
       :default nil)
+
+     (|recalculation_table|
+      :documentation "A mapping from memory references to the original gate arithmetic."
+      :type (:map |ParameterAref| -> :string)
+      :required nil)
 
      (|ro_sources|
       :documentation "Internal field for reshaping returned buffers."
