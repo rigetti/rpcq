@@ -1152,7 +1152,6 @@ class BinaryExecutableResponse(Message):
         return {
             'program': self.program,
             'memory_descriptors': self.memory_descriptors,
-            'recalculation_table': self.recalculation_table,
             'ro_sources': self.ro_sources
         }
 
@@ -1161,17 +1160,15 @@ class BinaryExecutableResponse(Message):
         return (
             self.program,
             self.memory_descriptors,
-            self.recalculation_table,
             self.ro_sources
         )
 
     def __init__(self,
                  program,
                  memory_descriptors=None,
-                 recalculation_table=None,
                  ro_sources=None,
                  **kwargs):
-        # type: (str, Dict[str,ParameterSpec], Dict[ParameterAref,str], List[object]) -> None
+        # type: (str, Dict[str,ParameterSpec], List[object]) -> None
 
         if kwargs:
             warnings.warn(("Message {} ignoring unexpected keyword arguments: "
@@ -1180,8 +1177,6 @@ class BinaryExecutableResponse(Message):
         # initialize default values of collections
         if memory_descriptors is None:
             memory_descriptors = {}
-        if recalculation_table is None:
-            recalculation_table = {}
         if ro_sources is None:
             ro_sources = []
 
@@ -1196,9 +1191,6 @@ class BinaryExecutableResponse(Message):
         if not (memory_descriptors is None or isinstance(memory_descriptors, dict)):
             raise TypeError("Parameter memory_descriptors must be of type dict, "
                             + "but object of type {} given".format(type(memory_descriptors)))
-        if not (recalculation_table is None or isinstance(recalculation_table, dict)):
-            raise TypeError("Parameter recalculation_table must be of type dict, "
-                            + "but object of type {} given".format(type(recalculation_table)))
         if not (ro_sources is None or isinstance(ro_sources, list)):
             raise TypeError("Parameter ro_sources must be of type list, "
                             + "but object of type {} given".format(type(ro_sources)))
@@ -1208,9 +1200,6 @@ class BinaryExecutableResponse(Message):
 
         self.memory_descriptors = memory_descriptors  # type: Dict[str,ParameterSpec]
         """Internal field for constructing patch tables."""
-
-        self.recalculation_table = recalculation_table  # type: Dict[ParameterAref,str]
-        """A mapping from memory references to the original gate arithmetic."""
 
         self.ro_sources = ro_sources  # type: List[object]
         """Internal field for reshaping returned buffers."""
