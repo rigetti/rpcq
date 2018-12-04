@@ -91,7 +91,8 @@
       (process-args args)
       (alexandria:plist-hash-table
        (list "*args" *args
-             "**kwargs" **kwargs)))))
+             "**kwargs" **kwargs)
+       :test #'equal))))
 
 (defun rpc-call (client call &rest args)
   "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
