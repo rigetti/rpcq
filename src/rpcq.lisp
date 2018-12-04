@@ -66,6 +66,16 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defmethod %serialize (payload)
   payload)
 
+(defmethod %serialize ((payload cons))
+  (loop :for elt :in payload :collect (%serialize elt)))
+
+(defmethod %serialize ((payload hash-table))
+  (let ((hash (make-hash-table :test #'equal)))
+    (loop :for k :being :the :hash-keys :of payload
+          :using (hash-value v)
+          :do (setf (gethash k hash) (%serialize v)))
+    hash))
+
 (defgeneric %deserialize (payload)
   (:documentation "Reconstruct objects that have already been converted to Lisp objects."))
 
