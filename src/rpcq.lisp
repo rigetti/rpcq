@@ -73,7 +73,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
   (let ((hash (make-hash-table :test #'equal)))
     (loop :for k :being :the :hash-keys :of payload
           :using (hash-value v)
-          :do (setf (gethash k hash) (%serialize v)))
+          :do (setf (gethash (%serialize k) hash) (%serialize v)))
     hash))
 
 (defgeneric %deserialize (payload)
