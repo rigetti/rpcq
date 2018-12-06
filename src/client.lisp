@@ -86,7 +86,7 @@
               (let ((key (sanitize-name (first args)))
                     (val (second args)))
                 (setf (gethash key **kwargs) val)
-                (process-**kwargs args))))))
+                (process-**kwargs (rest (rest args))))))))
       
       (process-args args)
       (alexandria:plist-hash-table
