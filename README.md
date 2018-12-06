@@ -12,8 +12,8 @@ Implements an efficient transport protocol by using [ZeroMQ](http://zeromq.org/)
 Not intended to be a full-featured replacement for other frameworks like
 [gRPC](https://grpc.io/) or [Apache Thrift](https://thrift.apache.org/).
 
-Installation
-------------
+python Installation
+-------------------
 
 To install directly from the source, run `pip install -e .` from within the top-level
 directory of the `rpcq` repository. To additionally install the requirements for testing,
@@ -26,6 +26,17 @@ run `pip install rpcq`.
 virtual environment (read up on [`virtualenv`](https://github.com/pypa/virtualenv),
 [`pyenv`](https://github.com/pyenv/pyenv), or [`conda`](https://github.com/conda/conda)
 for more info).
+
+Lisp Installation
+-----------------
+
+Installation is easier with QuickLisp. After placing the source for RPCQ within your local
+Lisp projects directory (cf. `ql:*local-project-directories*`), run `(ql:quickload :rpcq)`
+and QuickLisp will download the necessary Lisp dependencies.
+
+In addition to the Lisp dependencies, RPCQ depends on ZeroMQ.  Be sure to install both the
+library *and* its development headers (which are necessary for the Lisp foreign-function
+interface to get its bearings).
 
 Using the Client-Server Framework
 ---------------------------------
