@@ -143,12 +143,13 @@ By default, a symbol passed in for F will be automatically converted into the na
 (defun %rpc-server-thread-worker (&key
                                     dispatch-table
                                     logging-stream
-                                    timeout)
+                                    timeout
+                                    pool-address)
   "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGING-STREAM.
 
 DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signalling no timeout."
   (pzmq:with-socket receiver :dealer
-    (pzmq:connect receiver "inproc://workers")
+    (pzmq:connect receiver pool-address)
     (loop
       (handler-case
           (let (request result reply)
@@ -232,20 +233,22 @@ Argument descriptions:
   (check-type thread-count (integer 1))
   (check-type timeout (or null (real 0)))
   (check-type listen-addresses list)
-  (format-log logging-stream "Spawning server at ~a .~%" listen-addresses)
-  (pzmq:with-sockets ((clients :router :monitor) (workers :dealer :monitor))
-    (dolist (address listen-addresses)
-      (pzmq:bind clients address))
-    (pzmq:bind workers "inproc://workers")
-    (let ((thread-pool nil))
-      (unwind-protect
-           (progn
-             (dotimes (j thread-count)
-               (push (bt:make-thread (lambda () (%rpc-server-thread-worker
-                                                 :dispatch-table dispatch-table
-                                                 :logging-stream logging-stream
-                                                 :timeout timeout))
-                                     :name (format nil "RPC-server-thread-~a" j))
-                     thread-pool))
-             (pzmq:device :queue clients workers))
-        (mapc #'bt:destroy-thread thread-pool)))))
+  (let ((pool-address (format nil "inproc://~a" (unicly:make-v4-uuid))))
+    (format-log logging-stream "Spawning server at ~a .~%" listen-addresses)
+    (pzmq:with-sockets ((clients :router :monitor) (workers :dealer :monitor))
+      (dolist (address listen-addresses)
+        (pzmq:bind clients address))
+      (pzmq:bind workers pool-address)
+      (let ((thread-pool nil))
+        (unwind-protect
+             (progn
+               (dotimes (j thread-count)
+                 (push (bt:make-thread (lambda () (%rpc-server-thread-worker
+                                                   :dispatch-table dispatch-table
+                                                   :logging-stream logging-stream
+                                                   :timeout timeout
+                                                   :pool-address pool-address))
+                                       :name (format nil "RPC-server-thread-~a" j))
+                       thread-pool))
+               (pzmq:device :queue clients workers))
+          (mapc #'bt:destroy-thread thread-pool))))))
