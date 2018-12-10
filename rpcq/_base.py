@@ -87,7 +87,7 @@ class Message:
         return self.__dict__.get(key, default)
 
     def __getitem__(self, item):
-        return self.__dict__[item]
+        return self.__dict__.get(item)
 
     def __repr__(self):
         return "{}({})".format(
