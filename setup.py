@@ -43,6 +43,7 @@ setup(
     description='''The RPC framework and message specification for Rigetti QCS.''',
     long_description=long_description,
     install_requires=[
+        'dataclasses;python_version<="3.6"',
         'future',
         'msgpack>=0.5.2',
         'python-rapidjson',
