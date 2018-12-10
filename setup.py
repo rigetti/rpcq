@@ -48,7 +48,8 @@ setup(
         'python-rapidjson',
         'pyzmq>=17',
         'ruamel.yaml',
-        'typing'
+        'typing',
+        'dataclasses
     ],
     keywords='quantum rpc qcs',
     python_requires='>=3.5',
