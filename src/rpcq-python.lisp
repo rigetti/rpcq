@@ -219,15 +219,15 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                                                              ,(python-maybe-optional-typing-type type required))
                                ("    \"\"\"~a\"\"\""         ,documentation)))
                  (when deprecated
-                   (push (list slot-name nil required) deprecated-fields)))
+                   (push (list slot-name nil required "None") deprecated-fields)))
                 ;; recipe for a deprecating slot
                 (deprecates
                  (let ((definite-default (or (python-argspec-default type default) "None")))
                    (python-out `(("    ~a: ~a = ~a"      ,(symbol-name slot-name)
                                                          ,(python-maybe-optional-typing-type type t)
                                                          ,definite-default)
-                                 ("    \"\"\"~a\"\"\""   ,documentation))))
-                 (push (list deprecates slot-name required) deprecated-fields))
+                                 ("    \"\"\"~a\"\"\""   ,documentation)))
+                   (push (list deprecates slot-name required definite-default) deprecated-fields)))
                 ;; recipe for a slot with a default value
                 (defaultp
                  (python-out `(("    ~a: ~a = ~a"       ,(symbol-name slot-name)
@@ -244,8 +244,8 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
           (when deprecated-fields
             ;; (1) add fake getters / setters
             (dolist (field-spec deprecated-fields)
-              (destructuring-bind (old new new-required) field-spec
-                (declare (ignore new-required))
+              (destructuring-bind (old new new-required default-value) field-spec
+                (declare (ignore new-required default-value))
                 (when new
                   (python-out `(("    @property")
                                 ("    def ~a(self):"                                ,(symbol-name old))
@@ -263,8 +263,8 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
             (python-out `(("    def _extend_by_deprecated_fields(self, d):")
                           ("        super()._extend_by_deprecated_fields(d)")))
             (dolist (field-spec deprecated-fields)
-              (destructuring-bind (old new new-required) field-spec
-                (declare (ignore new-required))
+              (destructuring-bind (old new new-required default-value) field-spec
+                (declare (ignore new-required default-value))
                 (when new
                   (python-out `(("        d.~a = d.~a" ,(symbol-name old)
                                                        ,(symbol-name new)))))))
@@ -274,21 +274,29 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                     "    def __post_init__(self, ~{~a~^, ~}):~%"
                     (mapcar (alexandria:compose #'symbol-name #'first) deprecated-fields))
             (dolist (field-spec deprecated-fields)
-              (destructuring-bind (old new new-required) field-spec
-                (cond
-                  (new
-                   (python-out `(("        if not isinstance(~a, property):"                       ,(symbol-name old))
-                                 ("            if \"~a\" not in self.__dict__ or self.~a is None:" ,(symbol-name new)
+              (destructuring-bind (old new new-required default-value) field-spec
+                (let* ((appearance-index (search "field" default-value))
+                       (default-property-p (and appearance-index (zerop appearance-index))))
+                  (cond
+                    (new
+                     (python-out `(,(if default-property-p
+                                        `("        if not isinstance(~a, property):"                 ,(symbol-name old))
+                                        `("        if ~a is not ~a:"                                 ,(symbol-name old)
+                                                                                                     ,default-value))
+                                   ("            if \"~a\" not in self.__dict__ or self.~a is None:" ,(symbol-name new)
+                                                                                                     ,(symbol-name new))
+                                   ("                warn('~a is deprecated, use ~a instead')"       ,(symbol-name old)
+                                                                                                     ,(symbol-name new))
+                                   ("                self.__dict__[\"~a\"] = ~a~%"                   ,(symbol-name new)
+                                                                                                     ,(symbol-name old))))
+                     (when new-required
+                       (python-out `(("        if \"~a\" not in self.__dict__ or self.~a is None:" ,(symbol-name new)
                                                                                                    ,(symbol-name new))
-                                 ("                warn('~a is deprecated, use ~a instead')"       ,(symbol-name old)
-                                                                                                   ,(symbol-name new))
-                                 ("                self.__dict__[\"~a\"] = ~a~%"                   ,(symbol-name new)
-                                                                                                   ,(symbol-name old))))
-                   (when new-required
-                     (python-out `(("        if \"~a\" not in self.__dict__ or self.~a is None:" ,(symbol-name new)
-                                                                                                 ,(symbol-name new))
-                                   ("            raise(TypeError(\"~a is a required key.\"))~%"  ,(symbol-name new))))))
-                  (t
-                   (python-out `(("        if not isinstance(~a, property):"                            ,(symbol-name old))
-                                 ("            warn('~a is deprecated; please don\\'t set it anymore')" ,(symbol-name old))))))))))
+                                     ("            raise(TypeError(\"~a is a required key.\"))~%"  ,(symbol-name new))))))
+                    (t
+                     (python-out `(,(if default-property-p
+                                        `("        if not isinstance(~a, property):"                      ,(symbol-name old))
+                                        `("        if ~a is not ~a:"                                      ,(symbol-name old)
+                                                                                                          ,default-value))
+                                   ("            warn('~a is deprecated; please don\\'t set it anymore')" ,(symbol-name old)))))))))))
         (python-out '())))))
