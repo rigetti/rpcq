@@ -28,6 +28,7 @@
                #:bordeaux-threads       ; threaded RPC server
                #:local-time             ; local time for logs
                #:unicly                 ; UUID generation
+               #:cl-syslog              ; send logs to syslogd
                )
   :in-order-to ((asdf:test-op (asdf:test-op #:rpcq-tests)))
   :pathname "src/"

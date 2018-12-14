@@ -142,7 +142,7 @@ By default, a symbol passed in for F will be automatically converted into the na
 
 (defun %rpc-server-thread-worker (&key
                                     dispatch-table
-                                    logging-stream
+                                    logger
                                     timeout
                                     pool-address)
   "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGING-STREAM.
@@ -161,7 +161,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                     (unless (typep request '|RPCRequest|)
                       (error 'not-an-rpcrequest
                              :object request))
-                    (format-log logging-stream "Got request: ~a" (|RPCRequest-method| request))
+                    (cl-syslog:format-log logger ':info
+                                          "Got request: ~a" (|RPCRequest-method| request))
                     
                     (let ((kwargs-as-plist
                             (if (gethash "**kwargs" (|RPCRequest-params| request))
@@ -175,34 +176,37 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                         (unless f
                           (error 'unknown-rpc-method
                                  :method-name (|RPCRequest-method| request)))
-                        (let ((*debug-io* logging-stream))
-                          (setf result 
-                                (if timeout
-                                    (bt:with-timeout (timeout)
-                                      (apply f (append args-as-list kwargs-as-plist)))
-                                    (apply f (append args-as-list kwargs-as-plist)))))
+                        (setf result 
+                              (if timeout
+                                  (bt:with-timeout (timeout)
+                                    (apply f (append args-as-list kwargs-as-plist)))
+                                  (apply f (append args-as-list kwargs-as-plist))))
                         
                         (setf reply (make-instance '|RPCReply|
                                                    :|id| (|RPCRequest-id| request)
                                                    :|result| result))))
-                    (format-log logging-stream "Finishing request: ~a" (|RPCRequest-method| request)))
+                    (cl-syslog:format-log logger ':info
+                                          "Finishing request: ~a" (|RPCRequest-method| request)))
                 
                 ;; this is where errors go where we can reply to the client
                 (unknown-rpc-method (c)
                   (declare (ignore c))
-                  (format-log logging-stream "Error: method ~a unknown" (|RPCRequest-method| request))
+                  (cl-syslog:format-log logger ':error
+                                        "Error: method ~a unknown" (|RPCRequest-method| request))
                   (setf reply (make-instance '|RPCError|
                                              :|id| (|RPCRequest-id| request)
                                              :|error| (format nil "Method named \"~a\" is unknown."
                                                               (|RPCRequest-method| request)))))
                 (bt:timeout (c)
                   (declare (ignore c))
-                  (format-log logging-stream "Timed out on request ~a" (|RPCRequest-method| request))
+                  (cl-syslog:format-log logger ':error
+                                        "Timed out on request ~a" (|RPCRequest-method| request))
                   (setf reply (make-instance '|RPCError|
                                              :|id| (|RPCRequest-id| request)
                                              :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout))))
                 (error (c)
-                  (format-log logging-stream "Threw generic error during RPC call:~%~a" c)
+                  (cl-syslog:format-log logger ':error
+                                        "Unhandled error during RPC call:~%~a" c)
                   (setf reply (make-instance '|RPCError|
                                              :|id| (|RPCRequest-id| request)
                                              :|error| (format nil "~a" c)))))
@@ -212,13 +216,14 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
         
         ;; this is where errors go where we can't even reply to the client
         (simple-error (c)
-          (format-log logging-stream "Threw generic error before RPC call:~%~a" c))))))
+          (cl-syslog:format-log logger ':error
+                                "Threw generic error before RPC call:~%~a" c))))))
 
 (defun start-server (&key
                        dispatch-table
                        (listen-addresses (list "tcp://*:5555"))
                        (thread-count 5)
-                       (logging-stream (make-broadcast-stream))
+                       (logger (make-instance 'cl-syslog:rfc5424-logger))
                        timeout)
   "Main loop of an RPCQ server.
 
@@ -229,12 +234,13 @@ Argument descriptions:
  * LOGGING-STREAM is the stream to which the worker threads will write debug information.  This stream is also forwarded to the RPC functions as *DEBUG-IO*.
  * TIMEOUT, of type (OR NULL (REAL 0)), sets the maximum duration that a thread will be allowed to work for before it is forcefully terminated.  A TIMEOUT value of NIL signals that no thread will ever be terminated for taking too long."
   (check-type dispatch-table dispatch-table)
-  (check-type logging-stream stream)
+  (check-type logger cl-syslog:rfc5424-logger)
   (check-type thread-count (integer 1))
   (check-type timeout (or null (real 0)))
   (check-type listen-addresses list)
   (let ((pool-address (format nil "inproc://~a" (unicly:make-v4-uuid))))
-    (format-log logging-stream "Spawning server at ~a .~%" listen-addresses)
+    (cl-syslog:format-log logger ':info
+                          "Spawning server at ~a .~%" listen-addresses)
     (pzmq:with-sockets ((clients :router :monitor) (workers :dealer :monitor))
       (dolist (address listen-addresses)
         (pzmq:bind clients address))
@@ -245,7 +251,7 @@ Argument descriptions:
                (dotimes (j thread-count)
                  (push (bt:make-thread (lambda () (%rpc-server-thread-worker
                                                    :dispatch-table dispatch-table
-                                                   :logging-stream logging-stream
+                                                   :logger logger
                                                    :timeout timeout
                                                    :pool-address pool-address))
                                        :name (format nil "RPC-server-thread-~a" j))
