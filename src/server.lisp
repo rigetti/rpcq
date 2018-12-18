@@ -223,7 +223,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        dispatch-table
                        (listen-addresses (list "tcp://*:5555"))
                        (thread-count 5)
-                       (logger (make-instance 'cl-syslog:rfc5424-logger))
+                       (logger (make-instance 'cl-syslog:rfc5424-logger
+                                              :log-writer (cl-syslog:null-log-writer)))
                        timeout)
   "Main loop of an RPCQ server.
 
