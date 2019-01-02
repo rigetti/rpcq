@@ -45,7 +45,7 @@ def test_messages():
 
 
 def test_max_xxx_len():
-    obj = {f'q{n}': np.array([0.0 + 1.0j] * 100_000).tobytes(order='C') for n in list(range(16))}
+    obj = {f'q{n}': np.array([0.0 + 1.0j] * 100_000).tobytes(order='C') for n in range(16)}
     b = to_msgpack(obj)
     with pytest.raises(ValueError):
         from_msgpack(b, max_bin_len=2 ** 20 - 1)
