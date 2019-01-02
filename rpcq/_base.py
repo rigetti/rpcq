@@ -20,7 +20,7 @@ import msgpack
 from dataclasses import astuple, replace, fields, MISSING
 from ruamel import yaml
 
-MAX_XXX_LEN = 2 ** 30 - 1  # less than 1 GB
+MAX_BIN_LEN = MAX_STR_LEN = 2 ** 30 - 1  # less than 1 GB
 REPR_LIST_TRUNCATION = 10
 "Number of list elements to print when calling repr on a Message with a list field."
 
@@ -167,7 +167,7 @@ def from_msgpack(b):
     #   In msgpack >= 0.6, max_xxx_len is reduced from 2 GB to 1 MB, so we set the relevant ones
     #       to 1 GB as to not run into issues with the size of the values returned from rpcq
     return msgpack.loads(b, object_hook=_object_hook, raw=False,
-                         max_str_len=MAX_XXX_LEN, max_bin_len=MAX_XXX_LEN)
+                         max_str_len=MAX_STR_LEN, max_bin_len=MAX_BIN_LEN)
 
 
 def to_json(obj):
