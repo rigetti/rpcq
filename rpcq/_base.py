@@ -157,7 +157,7 @@ def to_msgpack(obj):
     return msgpack.dumps(obj, default=_default, use_bin_type=True)
 
 
-def from_msgpack(b):
+def from_msgpack(b, *, max_bin_len=MAX_BIN_LEN, max_str_len=MAX_STR_LEN):
     """
     Convert a msgpack byte array into Python objects (including rpcq objects)
     """
@@ -167,7 +167,7 @@ def from_msgpack(b):
     #   In msgpack >= 0.6, max_xxx_len is reduced from 2 GB to 1 MB, so we set the relevant ones
     #       to 2 GB as to not run into issues with the size of the values returned from rpcq
     return msgpack.loads(b, object_hook=_object_hook, raw=False,
-                         max_str_len=MAX_STR_LEN, max_bin_len=MAX_BIN_LEN)
+                         max_bin_len=max_bin_len, max_str_len=max_str_len)
 
 
 def to_json(obj):
