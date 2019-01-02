@@ -45,7 +45,7 @@ setup(
     install_requires=[
         'dataclasses;python_version<="3.6"',
         'future',
-        'msgpack>=0.5.2',
+        'msgpack==0.6',
         'python-rapidjson',
         'pyzmq>=17',
         'ruamel.yaml',
