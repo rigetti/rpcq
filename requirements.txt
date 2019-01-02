@@ -7,6 +7,7 @@ typing
 dataclasses
 
 # testing
+numpy
 pytest
 pytest-asyncio
 pytest-cov
