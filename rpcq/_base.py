@@ -17,9 +17,10 @@
 import rapidjson
 
 import msgpack
-from dataclasses import astuple, replace, fields, MISSING
+from dataclasses import astuple, replace, fields
 from ruamel import yaml
 
+MAX_BIN_LEN = MAX_STR_LEN = 2 ** 31 - 1  # less than 2 GB
 REPR_LIST_TRUNCATION = 10
 "Number of list elements to print when calling repr on a Message with a list field."
 
@@ -156,14 +157,17 @@ def to_msgpack(obj):
     return msgpack.dumps(obj, default=_default, use_bin_type=True)
 
 
-def from_msgpack(b):
+def from_msgpack(b, *, max_bin_len=MAX_BIN_LEN, max_str_len=MAX_STR_LEN):
     """
     Convert a msgpack byte array into Python objects (including rpcq objects)
     """
     # Docs for raw parameter are somewhat hard to find so they're copied here:
     #   If true, unpack msgpack raw to Python bytes (default).
     #   Otherwise, unpack to Python str (or unicode on Python 2) by decoding with UTF-8 encoding (recommended).
-    return msgpack.loads(b, object_hook=_object_hook, raw=False)
+    #   In msgpack >= 0.6, max_xxx_len is reduced from 2 GB to 1 MB, so we set the relevant ones
+    #       to 2 GB as to not run into issues with the size of the values returned from rpcq
+    return msgpack.loads(b, object_hook=_object_hook, raw=False,
+                         max_bin_len=max_bin_len, max_str_len=max_str_len)
 
 
 def to_json(obj):

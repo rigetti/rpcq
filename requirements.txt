@@ -1,5 +1,5 @@
 future
-msgpack>=0.5.2
+msgpack == 0.6
 python-rapidjson
 pyzmq>=17
 ruamel.yaml
@@ -7,6 +7,7 @@ typing
 dataclasses
 
 # testing
+numpy
 pytest
 pytest-asyncio
 pytest-cov
