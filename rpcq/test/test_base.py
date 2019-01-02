@@ -16,7 +16,10 @@
 from __future__ import print_function
 import logging
 
+import numpy as np
 import pytest
+
+from rpcq._base import to_msgpack, from_msgpack
 from rpcq.messages import (RPCError)
 
 log = logging.getLogger(__file__)
@@ -39,3 +42,10 @@ def test_messages():
 
     with pytest.raises(TypeError):
         RPCError(bad_field=1)
+
+
+def test_max_xxx_len():
+    obj = {f'q{n}': np.array([0.0 + 1.0j] * 100_000).tobytes(order='C') for n in list(range(16))}
+    b = to_msgpack(obj)
+    with pytest.raises(ValueError):
+        from_msgpack(b, max_bin_len=2 ** 20 - 1)
