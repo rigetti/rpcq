@@ -20,6 +20,7 @@ import asyncio
 import logging
 from asyncio import AbstractEventLoop
 from typing import Callable
+from datetime import datetime
 
 import zmq.asyncio
 
@@ -34,12 +35,14 @@ class Server:
     """
     Server that accepts JSON RPC calls through a socket.
     """
-    def __init__(self, rpc_spec: RPCSpec = None):
+    def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False):
         """
         Create a server that will be linked to a socket
 
         :param rpc_spec: JSON RPC spec
         """
+        self.announce_timing = announce_timing
+
         self.rpc_spec = rpc_spec if rpc_spec else RPCSpec()
         self._exit_handlers = []
 
@@ -140,7 +143,11 @@ class Server:
         """
         try:
             _log.debug("Client %s sent request: %s", identity, request)
+            start_time = datetime.now()
             reply = await self.rpc_spec.run_handler(request)
+            if self.announce_timing:
+                _log.info("Request {} for {} lasted {} seconds".format(
+                    request.id, request.method, (datetime.now() - start_time).total_seconds()))
 
             _log.debug("Sending client %s reply: %s", identity, reply)
             await self._socket.send_multipart([identity, *empty_frame, to_msgpack(reply)])

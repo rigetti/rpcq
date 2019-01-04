@@ -23,8 +23,8 @@
                               `(:array :uint8 ,(pzmq:msg-size msg))))
 
 (defun global-function-p (symbol)
-  "Return true if SYMBOL names a global function. Return false if it doesn't."
-  (check-type symbol symbol)
-  (and (fboundp symbol)
+  "Return true if SYMBOL is a symbol naming a global function. Return false otherwise."
+  (and (typep symbol 'symbol)
+       (fboundp symbol)
        (not (macro-function symbol))
        (not (special-operator-p symbol))))

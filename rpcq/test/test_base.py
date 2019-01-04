@@ -16,77 +16,19 @@
 from __future__ import print_function
 import logging
 
+import numpy as np
 import pytest
-from rpcq._base import (Message)
+
+from rpcq._base import to_msgpack, from_msgpack
+from rpcq.messages import (RPCError)
 
 log = logging.getLogger(__file__)
 
 
 def test_messages():
-
-    class TestRPCError(Message):
-        """A error message for JSONRPC requests."""
-
-        # fix slots
-        __slots__ = (
-            'jsonrpc',
-            'error',
-            'id',
-        )
-
-        def asdict(self):
-            """Generate dictionary representation of self."""
-            return {
-                'jsonrpc': self.jsonrpc,
-                'error': self.error,
-                'id': self.id
-            }
-
-        def astuple(self):
-            """Generate tuple representation of self."""
-            return (
-                self.jsonrpc,
-                self.error,
-                self.id
-            )
-
-        def __init__(self,
-                     error,
-                     id,
-                     jsonrpc="2.0"):
-            # type: (str, str, str) -> None
-
-            # check presence of required fields
-            if jsonrpc is None:
-                raise ValueError("The field 'jsonrpc' cannot be None")
-            if error is None:
-                raise ValueError("The field 'error' cannot be None")
-            if id is None:
-                raise ValueError("The field 'id' cannot be None")
-
-            # verify types
-            if not isinstance(jsonrpc, str):
-                raise TypeError("Parameter jsonrpc must be of type str, "
-                                + "but object of type {} given".format(type(jsonrpc)))
-            if not isinstance(error, str):
-                raise TypeError("Parameter error must be of type str, "
-                                + "but object of type {} given".format(type(error)))
-            if not isinstance(id, str):
-                raise TypeError("Parameter id must be of type str, "
-                                + "but object of type {} given".format(type(id)))
-
-            self.jsonrpc = jsonrpc  # type: str
-            """The JSONRPC version."""
-
-            self.error = error  # type: str
-            """The error message."""
-
-            self.id = id  # type: str
-            """The RPC request id."""
-
     e = "Error"
     i = "asefa32423"
-    m = TestRPCError(e, id=i)
+    m = RPCError(error=e, id=i)
     assert m.error == e
     assert m.id == i
     assert m.jsonrpc == "2.0"
@@ -97,7 +39,13 @@ def test_messages():
     assert m.asdict() == {"error": e,
                         "id": i,
                         "jsonrpc": "2.0"}
-    assert m.astuple() == ("2.0", e, i)
 
     with pytest.raises(TypeError):
-        TestRPCError(bad_field=1)
+        RPCError(bad_field=1)
+
+
+def test_max_xxx_len():
+    obj = {f'q{n}': np.array([0.0 + 1.0j] * 100_000).tobytes(order='C') for n in range(16)}
+    b = to_msgpack(obj)
+    with pytest.raises(ValueError):
+        from_msgpack(b, max_bin_len=2 ** 20 - 1)

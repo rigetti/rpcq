@@ -1,4 +1,3 @@
-;;;; rpcq.lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Copyright 2018 Rigetti Computing
 ;;;;
@@ -14,6 +13,9 @@
 ;;;;    See the License for the specific language governing permissions and
 ;;;;    limitations under the License.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; rpcq.lisp
+;;;;
 
 (in-package #:rpcq)
 
@@ -33,36 +35,12 @@
   '(member :string :bytes :bool :float :integer :any))
 
 
-(defparameter *python-types*
-  '(:string "str"
-    :bytes "bytes"
-    :float "float"
-    :integer "int"
-    :bool "bool"
-    :map "dict"
-    :list "list"
-    :any "object"))
-
-(defparameter *python-instance-check-types*
-  '(:string "basestring"
-    :bytes "bytes"
-    :float "float"
-    :integer "int"
-    :bool "bool"
-    :map "dict"
-    :list "list"
-    :any "object"))
-
 (defun format-documentation-string (string)
   "Format a documentation string STRING into its final stored representation.
 
 The input strings are assumed to be FORMAT-compatible, so sequences like ~<newline> are allowed."
   (check-type string string)
   (format nil string))
-
-(defun python-instance-check-type (field-type)
-  (let ((*python-types* *python-instance-check-types*))
-    (python-type field-type)))
 
 (defun to-octets (string)
   "Convert a string S to a vector of 8-bit unsigned bytes"
@@ -72,307 +50,6 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
   "Convert a vector of octets to a string"
   (map 'string 'code-char octets))
 
-(defun python-argspec-default (field-type default)
-  "Translate DEFAULT values for immutable objects of a given
-FIELD-TYPE to python."
-  (case field-type
-    ((:string)
-     (if default
-         (format nil "~S" default)
-         "None"))
-    ((:bytes)
-     (if default
-         (format nil "b~S" (to-string default))
-         "None"))
-    ((:bool)
-     (if default
-         "True"
-         "False"))
-    ((:integer)
-     (if default
-         (format nil "~d" default)
-         "None"))
-    ((:float)
-     (if default
-         (format nil "~e" default)
-         "None"))
-    (otherwise
-     "None")))
-
-(defun python-type (field-type)
-  "Always return a basic python type not List[...] or Dict[...] for
-instance checks."
-  (python-typing-type
-   (if (listp field-type)
-       (car field-type)
-       field-type)))
-
-(defun python-typing-type (field-type)
-  "Return the python typing-module compliant field type"
-  (cond
-    ((keywordp field-type)
-     (assert (member field-type *python-types*)
-             (field-type)
-             "Unknown field-type ~S" field-type)
-     (getf *python-types* field-type))
-    ((symbolp field-type)
-     ;; field-type is assumed to be message object
-     (format nil "~a" field-type))
-    ((eq (car field-type) :list)
-     (format nil "List[~a]" (python-typing-type (cadr field-type))))
-    ((eq (car field-type) :map)
-     (assert (string= (symbol-name (caddr field-type)) "->")
-             (field-type)
-             "Bad mapping spec.")
-     (format nil
-             "Dict[~a,~b]"
-             (python-typing-type (cadr field-type))
-             (python-typing-type (cadddr field-type))))))
-
-(defun python-maybe-optional-typing-type (field-type required)
-  "Rerturn the python type string for FIELD-TYPE while
-accounting for whether the field is REQUIRED.
-"
-  (let ((b (python-typing-type field-type)))
-    (if (or required
-            (listp field-type))
-        b
-        (format nil "Optional[~a]" b))))
-
-(defun python-collections-initform (field-type default)
-  "Translate a DEFAULT value of type FIELD-TYPE to a python initform."
-  (check-type field-type list)
-  (cond
-    ;; handle lists
-    ((eq :list (car field-type))
-     (if (null default)
-         "[]"
-         (with-output-to-string (s)
-           (yason:encode default s))))
-
-    ;; handle mappings
-    ((eq :map (car field-type))
-     (if (null default)
-         "{}"
-         (with-output-to-string (s)
-           (yason:encode (%plist-to-string-hash-table default) s))))
-    (t
-     (error "Unrecognized field-type ~A" field-type))))
-
-
-(defun python-message-spec (&optional (stream nil))
-  "print an importable python file with the message definitions"
-  (format stream "#!/usr/bin/env python
-
-\"\"\"
-WARNING: This file is auto-generated, do not edit by hand. See README.md.
-\"\"\"
-
-import warnings
-from rpcq._base import Message
-from typing import List, Dict, Optional
-
-# Python 2/3 str/unicode compatibility
-from past.builtins import basestring
-
-
-class CoreMessages(object):
-    \"\"\"
-    WARNING: This class is auto-generated, do not edit by hand. See README.md.
-    This class is also DEPRECATED.
-    \"\"\"
-
-
-class _deprecated_property(object):
-
-    def __init__(self, prop):
-        self.prop = prop
-
-    def __get__(self, *args):
-        warnings.warn(
-            \"'CoreMessages.{0}' is deprecated. Please access '{0}' directly at the module level.\".format(
-                self.prop.__name__),
-            UserWarning)
-        return self.prop
-
-")
-  ;; for each message we need:
-  ;; - the message name and documentation
-  ;; - the message field names to define the
-  ;;   slots as well as the asdict and astuple methods
-  ;; - the constructor definition argument specification
-  ;;   (includes default values for primitive types)
-  ;; - the constructor type signature
-  ;; - the default values for lists and dicts
-  ;; - the not-None checks for all required arguments
-  ;; - the type checks for all arguments (accounting for required args)
-  ;; - the instance attribute assignment plus attribute docstring
-  (loop :for (msg-name field-specs documentation) :in *messages*
-        :collect
-        (let
-            (slot-names
-             args-no-default
-             args-with-default
-             required-args
-             field-instantiations
-             type-checks
-             collections-defaults)
-          (loop :for (name . params) :in (reverse field-specs)
-                :for required := (getf params :required)
-                :for type := (getf params :type)
-                :for typing-type := (python-maybe-optional-typing-type type required)
-                :for basic-type := (python-type type)
-                :for instance-check-type := (python-instance-check-type type)
-                :for defaultp := (member :default params)
-                :for default := (getf params :default)
-                :for collectionp := (listp type)
-                :for documentation := (getf params :documentation
-                                            (format nil "Field ~a of type ~a" name type))
-                :do
-                   ;; slot names
-                   (push name slot-names)
-
-                   ;; constructor arguments
-                   (if (and required
-                            (not defaultp))
-
-                       ;; regular positional argument
-                       (push (list name typing-type) args-no-default)
-
-                       ;; keyword argument
-                       (push (list
-                              (format nil "~a=~a" name
-                                      (python-argspec-default
-                                       type
-                                       default))
-                              typing-type)
-                             args-with-default))
-
-                   ;; required arguments that are not collections with
-                   ;; default values
-                   (when (and required
-                              (or
-                               (not defaultp)
-                               (not collectionp)))
-                     (push name required-args))
-
-                   ;; instance attribute initializations
-                   (push (list name typing-type documentation) field-instantiations)
-
-                   ;; type checking
-                   (push
-                    (list required name instance-check-type name instance-check-type name)
-                    type-checks)
-
-                   ;; Initialize default values for collections
-                   (when (and collectionp
-                              (or (not required)
-                                  defaultp))
-                     (push (list
-                            name
-                            (python-collections-initform type default))
-                           collections-defaults)))
-          (let
-              ;; concatenate positional and keyword args
-              ((init-arg-spec
-                 (concatenate 'list
-                              (mapcar #'car args-no-default)
-                              (mapcar #'car args-with-default)))
-
-               ;; constructor argument type signature
-               (typing-types-arg-spec
-                 (concatenate 'list
-                              (mapcar #'cadr args-no-default)
-                              (mapcar #'cadr args-with-default))))
-
-            ;; Add class header, documentation and implementations of
-            ;; asdict and astuple
-            (format stream
-                    "~&
-class ~A(Message):
-    \"\"\"~a\"\"\"
-
-    # fix slots
-    __slots__ = (
-        ~{'~a'~^,
-        ~},
-    )
-
-    def asdict(self):
-        \"\"\"Generate dictionary representation of self.\"\"\"
-        return {
-            ~:*~{'~a~:*': self.~a~^,
-            ~}
-        }
-
-    def astuple(self):
-        \"\"\"Generate tuple representation of self.\"\"\"
-        return (
-            ~:*~{self.~a~^,
-            ~}
-        )~%"
-                    (symbol-name msg-name)
-                    (or documentation (symbol-name msg-name))
-                    slot-names)
-
-            ;; Add constructor signature and type hint
-            (format stream  "
-    def __init__(self,
-                 ~{~a~^,
-                 ~},
-                 **kwargs):
-        # type: (~{~a~^, ~}) -> None~%
-        if kwargs:
-            warnings.warn((\"Message {} ignoring unexpected keyword arguments: \"
-                    \"{}.\").format(self.__class__.__name__, \", \".join(kwargs.keys())))
-"
-                    init-arg-spec
-                    typing-types-arg-spec)
-
-            ;; Initialize collections (list+dict) that either have
-            ;; default values or are optional to empty containers if
-            ;; they are None
-            (when collections-defaults
-              (format stream "
-        ~:[~;# initialize default values of collections~]~:*
-        ~{if ~a is None:
-            ~:*~a = ~a~^
-        ~}~%"
-                      (apply #'append collections-defaults)))
-
-            ;; Check that required fields are not None (skip
-            ;; collections with default values as those are
-            ;; automatically converted to empty containers above
-            (when required-args
-              (format stream "
-        ~:[~;# check presence of required fields~]~:*
-        ~{if ~a~:* is None:
-            raise ValueError(\"The field '~a' cannot be None\")~^
-        ~}~%"
-                      required-args))
-
-            ;; Verify field types. For non-required fields a value of
-            ;; None is permitted
-            (when type-checks
-              (format stream "
-        ~:[~;# verify types~]~:*
-        ~{if not ~:[(~a is None or isinstance(~:*~a, ~a))~;isinstance(~a, ~a)~]:
-            raise TypeError(\"Parameter ~a must be of type ~a, \"
-                            + \"but object of type {} given\".format(type(~a)))~^
-        ~}~%"
-                      (apply #'append type-checks)))
-
-            ;; Actually set the instance attributes and add type hint
-            ;; and docstring
-            (format stream "
-        ~{self.~a~:* = ~a  # type: ~a
-        \"\"\"~a\"\"\"~^
-
-        ~}~%"
-                    (apply #'append field-instantiations))
-            (format stream "
-CoreMessages.~A = _deprecated_property(~:*~A)
-" (symbol-name msg-name))))))
 
 (defun serialize (obj &optional stream)
   "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."
@@ -388,6 +65,16 @@ CoreMessages.~A = _deprecated_property(~:*~A)
 
 (defmethod %serialize (payload)
   payload)
+
+(defmethod %serialize ((payload cons))
+  (loop :for elt :in payload :collect (%serialize elt)))
+
+(defmethod %serialize ((payload hash-table))
+  (let ((hash (make-hash-table :test #'equal)))
+    (loop :for k :being :the :hash-keys :of payload
+          :using (hash-value v)
+          :do (setf (gethash (%serialize k) hash) (%serialize v)))
+    hash))
 
 (defgeneric %deserialize (payload)
   (:documentation "Reconstruct objects that have already been converted to Lisp objects."))
@@ -533,78 +220,197 @@ We distinguish between the following options for any field type:
     tbl))
 
 
-(defmacro defmessage (class-name field-specs &key (documentation nil))
-  "Create a (de-)serializable message definition with name CLASS-NAME and slots (SLOT-SPECS)."
+(defmacro defmessage (class-name parent-name field-specs &key (documentation nil))
+  "Create a (de-)serializable message definition.
+
+PARAMETERS:
+  * CLASS-NAME: The name of the message type.
+  * PARENT-NAME: A list of length at most 1 of \"parent message types\". Child message types inherit their parents slot specifications.
+  * FIELD-SPECS: A list of slot specifications for the message type.  An entry in FIELD-SPECS is a plist with the following possible keys:
+    :TYPE          - Either an atomic type, a list type, a map type, or another RPCQ message name.
+    :REQUIRED      - A boolean indicating whether the field is required. If it is required, there must be a default value, either supplied through :DEFAULT or implicitly.
+    :DOCUMENTATION - A documentation string.
+    :DEFAULT       - A default value for the slot.
+    :DEPRECATES    - The slot name that this slot replaces.
+    :DEPRECATED-BY - The slot name that this slot is replaced by.
+    :DEPRECATED    - Indicates that this slot is being phased out without a replacement.
+
+LIMITATIONS:
+  * DEPRECATES / DEPRECATED-BY must come in balanced pairs.
+  * DEPRECATES / DEPRECATED-BY are mutually exclusive. (Nested deprecation is not currently supported.)
+  * DEPRECATES / DEPRECATED-BY must reference slots on the same message, and not on parent messages."
   (check-type class-name symbol)
-  (setf *messages* (nconc *messages* `((,class-name ,field-specs ,documentation))))
-  (flet ((accessor (slot-name)
-           (alexandria:symbolicate (symbol-name class-name)
-                                   "-"
-                                   (symbol-name slot-name))))
-    (flet ((make-slot-spec (field-spec)
+  (assert (or (null parent-name)
+              (and (typep parent-name 'cons)
+                   (= 1 (length parent-name)))))
+  (setf *messages* (nconc *messages* `((,class-name ,(first parent-name) ,field-specs ,documentation))))
+  (labels ((accessor (slot-name)
+             (alexandria:symbolicate (symbol-name class-name)
+                                     "-"
+                                     (symbol-name slot-name)))
+           (make-slot-spec (field-spec)
              (let*
                  ((slot-name (car field-spec))
                   (field-settings (cdr field-spec))
-                  (field-type (getf field-settings :type))
-                  (required (getf field-settings :required))
-                  (documentation (getf field-settings :documentation))
-                  (defaultp (member :default field-settings))
-                  (default (getf field-settings :default)))
-
+                  (field-type (getf field-settings ':type))
+                  (required (getf field-settings ':required))
+                  (documentation (getf field-settings ':documentation))
+                  (defaultp (member ':default field-settings))
+                  (default (getf field-settings ':default))
+                  (deprecated (getf field-settings ':deprecated))
+                  (deprecates (getf field-settings ':deprecates))
+                  (deprecated-by (getf field-settings ':deprecated-by)))
+               
+               (assert (not (and deprecates deprecated-by))
+                       ()
+                       "It is currently unsupported for messages to have multiple levels of deprecation.")
+               
+               (assert (not (and deprecated (or deprecates deprecated-by)))
+                       ()
+                       "It does not make sense to deprecate a field simultaneously with and without replacement.")
+               
                (multiple-value-bind (slot-type initform)
                    (slot-type-and-initform field-type required default)
-                 `(,slot-name :initarg ,(intern (symbol-name slot-name) :keyword)
-                              :reader ,(accessor slot-name)
-                              :type ,slot-type
+                 `(,slot-name
+                   ;; a slot can have multiple initialization vectors.
+                   ;; we allow a slot to be initialized by its own name, by the
+                   ;; name of a slot that it deprecates, and by the name of a slot
+                   ;; that it's deprecated by. these override each other: we
+                   ;; prefer the slot that it's deprecated by to our own name,
+                   ;; which we in turn prefer to the slot which we deprecate.
+                   ,@(when deprecates
+                       `(:initarg ,(intern (symbol-name deprecates) :keyword)))
+                   :initarg ,(intern (symbol-name slot-name) :keyword)
+                   ,@(when deprecated-by
+                       `(:initarg ,(intern (symbol-name deprecated-by) :keyword)))
+                   
+                   :reader ,(accessor slot-name)
+                   :type ,slot-type
 
-                              ;; only add documentation if present
-                              ,@(when documentation
-                                  (list :documentation (format-documentation-string
-                                                        documentation)))
+                   ;; only add documentation if present
+                   ,@(when documentation
+                       (list :documentation (format-documentation-string
+                                             documentation)))
 
-                              ;; if no default value given
-                              ;; but field is required raise error
-                              ,@(if (and required (not defaultp))
-                                    `(:initform (error
-                                                 (concatenate
-                                                  'string
-                                                  "Missing value for field "
-                                                  ,(symbol-name slot-name))))
-                                    ;; else initialize to
-                                    ;; initform generated by TRANSLATE-FIELD-TYPE
-                                    `(:initform ,initform))))))
+                   ;; if no default value given
+                   ;; but field is required raise error
+                   ,@(if (and required (not defaultp))
+                         `(:initform (error
+                                      (concatenate
+                                       'string
+                                       "Missing value for field "
+                                       ,(symbol-name slot-name))))
+                         ;; else initialize to
+                         ;; initform generated by TRANSLATE-FIELD-TYPE
+                         `(:initform ,initform))))))
+           (slot-initialization-deprecation-warnings (field-spec)
+             (let* ((slot-name (car field-spec))
+                    (slot-keyword (intern (symbol-name slot-name) :keyword))
+                    (field-settings (cdr field-spec)))
+               (alexandria:when-let* ((deprecated-by (getf field-settings ':deprecated-by))
+                                      (deprecated-by-keyword (intern (symbol-name deprecated-by) :keyword)))
+                 (list `(when (and (getf initargs ,slot-keyword)
+                                   (not (getf initargs ,deprecated-by-keyword)))
+                          (warn ,(format nil "~a has been deprecated by ~a."
+                                         slot-keyword deprecated-by-keyword)))))))
+           (slot-accessor-deprecation-warnings (field-spec)
+             (let* ((slot-name (car field-spec))
+                    (slot-keyword (intern (symbol-name slot-name) :keyword))
+                    (field-settings (cdr field-spec)))
+               (alexandria:when-let* ((deprecated-by (getf field-settings ':deprecated-by))
+                                      (deprecated-by-keyword (intern (symbol-name deprecated-by) :keyword)))
+                 (list `(defmethod ,(accessor slot-name) ((obj ,class-name))
+                          (warn ,(format nil "~a has been deprecated by ~a."
+                                         slot-keyword deprecated-by-keyword))
+                          (,(accessor deprecated-by) obj))))))
            (init-spec (json)
              (lambda (slot-name)
                `( ,(intern (symbol-name slot-name) :keyword)
                   (%deserialize (gethash ,(symbol-name slot-name) ,json))))))
-      (alexandria:with-gensyms (obj hash-table)
-        (let ((slot-names (mapcar #'car field-specs)))
-          `(progn
-             (defclass ,class-name ()
-               ,(mapcar #'make-slot-spec field-specs)
-               ,@(when documentation
-                   `((:documentation ,(format-documentation-string documentation)))))
-             
-             (defmethod %serialize ((,obj ,class-name))
-               (with-slots ,slot-names ,obj
-                 (let ((,hash-table (make-hash-table :test #'equal)))
-                   (setf (gethash "_type" ,hash-table) ,(symbol-name class-name))
-                   ,@(loop :for slot :in slot-names
-                           :collect `(setf (gethash ,(symbol-name slot) ,hash-table)
-                                           (%serialize ,slot)))
-                   ,hash-table)))
+    (alexandria:with-gensyms (obj init-args)
+      (let ((slot-names (mapcar #'car field-specs)))
+        `(progn
+           ;; here we define the actual message class object.
+           ;; the most complicated aspect is setting up all the slot definitions
+           ;; (which store default init values, type info, ...).
+           (defclass ,class-name ,parent-name
+             ,(mapcar #'make-slot-spec field-specs)
+             ,@(when documentation
+                 `((:documentation ,(format-documentation-string documentation)))))
+           
+           ;; in the event that our message has deprecated slots, we need to
+           ;; warn the user if they use them during initialization.
+           (defmethod shared-initialize ((instance ,class-name) slot-names
+                                         &rest initargs
+                                         &key &allow-other-keys)
+             ,@(mapcan #'slot-initialization-deprecation-warnings field-specs)
+             (call-next-method))
+           
+           ;; similarly, we warn a user who tries to read from deprecated slots
+           ,@(mapcan #'slot-accessor-deprecation-warnings field-specs)
+           
+           ;; in order to serialize our message, we recurse through our class
+           ;; ancestry and load up a hash table with all our slots. this splits
+           ;; into two parts: initializing the hash table (done here) and the
+           ;; recursion (done in %%serialize)
+           (defmethod %serialize ((,obj ,class-name))
+             (%%serialize ,obj (make-hash-table :test #'equal)))
+           
+           (defmethod %%serialize ((,obj ,class-name) (hash-table hash-table))
+             (with-slots ,slot-names ,obj
+               ,@(loop :for slot :in slot-names
+                       :collect `(setf (gethash ,(symbol-name slot) hash-table)
+                                       (%serialize ,slot)))
+               (call-next-method)
+               (setf (gethash "_type" hash-table) ,(symbol-name class-name))
+               hash-table))
 
-             (defmethod %deserialize-struct ((type (eql ',class-name)) (payload hash-table))
-               (assert (string= (gethash "_type" payload) ,(symbol-name class-name)))
-               (make-instance ',class-name
-                              ,@(mapcan (init-spec 'payload) slot-names)))
+           ;; similarly, in order to deserialize a message we recurse over our
+           ;; class ancestry and load up a hash table with all of the expected
+           ;; slots. this also cleaves into two parts: setting up the hash
+           ;; table (done here) and the recursion (done in %%deserialize-struct)
+           (defmethod %deserialize-struct ((type (eql ',class-name)) (payload hash-table))
+             (assert (string= (gethash "_type" payload) ',class-name))
+             (let ((,init-args (%%deserialize-struct type payload)))
+               (apply 'make-instance
+                      ',class-name
+                      ,init-args)))
+           
+           (defmethod %%deserialize-struct ((type (eql ',class-name)) (payload hash-table))
+             ,(cond
+                (parent-name
+                 `(list*
+                   ,@(mapcan (init-spec 'payload) slot-names)
+                   (%%deserialize-struct ',@parent-name payload)))
+                (t
+                 `(list ,@(mapcan (init-spec 'payload) slot-names)))))
 
+           ;; similarly similarly, in order to print out the contents of an RPCQ
+           ;; message we walk over our class ancestry and print out all the
+           ;; slots that each ancestor contributes.  this also also cleaves into
+           ;; two parts: setting up the basics of the printing (done here) and
+           ;; the recursion (done in %print-slots)
+           (defmethod print-object ((,obj ,class-name) stream)
+             (print-unreadable-object (,obj stream :type t)
+               (pprint-indent :block 2)
+               (%print-slots ,obj stream)))
+           
+           (defmethod %print-slots ((,obj ,class-name) stream)
+             ,@(loop :for spec :in field-specs
+                     :unless (getf (cdr spec) ':deprecated-by)
+                       :collect `(format stream
+                                         "~&  ~A -> ~S"
+                                         ,(symbol-name (car spec))
+                                         (,(accessor (car spec)) ,obj)))
+             (call-next-method))
+           
+           nil)))))
 
-             (defmethod print-object ((,obj ,class-name) stream)
-               (print-unreadable-object (,obj stream :type t)
-                 (pprint-indent :block 2)
-                 ,@(loop :for slot :in slot-names
-                         :collect `(format stream
-                                           "~&  ~A -> ~S"
-                                           ,(symbol-name slot)
-                                           (,(accessor slot) ,obj)))))))))))
+(defmethod %print-slots (obj stream)
+  nil)
+
+(defmethod %%serialize (obj hash-table)
+  nil)
+
+(defmethod %%deserialize-struct (type payload)
+  nil)

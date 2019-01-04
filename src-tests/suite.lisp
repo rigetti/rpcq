@@ -35,7 +35,7 @@
 
 
 (deftest test-defmessage ()
-  (rpcq::defmessage my-msg
+  (rpcq::defmessage my-msg ()
       ((required-int
         :type :integer
         :required t

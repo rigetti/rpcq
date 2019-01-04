@@ -18,7 +18,7 @@
 (in-package #:rpcq)
 
 
-(defmessage |ParameterSpec|
+(defmessage |ParameterSpec| ()
     (
      (|type|
       :documentation "The parameter type, e.g., one of 'INTEGER', or 'FLOAT'."
@@ -34,7 +34,7 @@
      )
   :documentation "Specification of a dynamic parameter type and array-length.")
 
-(defmessage |ParameterAref|
+(defmessage |ParameterAref| ()
     (
      (|name|
       :documentation "The parameter name"
@@ -48,7 +48,7 @@
      )
   :documentation "A parametric expression.")
 
-(defmessage |PatchTarget|
+(defmessage |PatchTarget| ()
     (
      (|patch_type|
       :documentation "Data type at this address."
@@ -63,7 +63,7 @@
 
   :documentation "Patchable memory location descriptor.")
 
-(defmessage |RPCRequest|
+(defmessage |RPCRequest| ()
     (
      (|jsonrpc|
       :documentation "The JSONRPC version."
@@ -88,7 +88,7 @@
      )
   :documentation "A single request object according to the JSONRPC standard.")
 
-(defmessage |RPCReply|
+(defmessage |RPCReply| ()
     (
      (|jsonrpc|
       :documentation "The JSONRPC version."
@@ -108,7 +108,7 @@
      )
   :documentation "The reply for a JSONRPC request.")
 
-(defmessage |RPCError|
+(defmessage |RPCError| ()
     (
      (|jsonrpc|
       :documentation "The JSONRPC version."
@@ -128,7 +128,7 @@
      )
   :documentation "A error message for JSONRPC requests.")
 
-(defmessage |TargetDevice|
+(defmessage |TargetDevice| ()
     ((|isa|
       :documentation "Instruction-set architecture for this device."
       :type (:map :string -> :map)
@@ -140,7 +140,7 @@
       :required t))
   :documentation "ISA and specs for a particular device.")
 
-(defmessage |RandomizedBenchmarkingRequest|
+(defmessage |RandomizedBenchmarkingRequest| ()
     ((|depth|
       :documentation "Depth of the benchmarking sequence."
       :type :integer
@@ -159,11 +159,16 @@
      (|seed|
       :documentation "PRNG seed. Set this to guarantee repeatable results."
       :type :integer
+      :required nil)
+
+     (|interleaver|
+      :documentation "Fixed Clifford, specified as a Quil string, to interleave through an RB sequence."
+      :type :string
       :required nil))
 
   :documentation "RPC request payload for generating a randomized benchmarking sequence.")
 
-(defmessage |RandomizedBenchmarkingResponse|
+(defmessage |RandomizedBenchmarkingResponse| ()
     ((|sequence|
       :documentation "List of Cliffords, each expressed as a list of generator indices."
       :type (:list (:list :integer))
@@ -171,7 +176,7 @@
 
   :documentation "RPC reply payload for a randomly generated benchmarking sequence.")
 
-(defmessage |PauliTerm|
+(defmessage |PauliTerm| ()
     ((|indices|
       :documentation "Qubit indices onto which the factors of a Pauli term are applied."
       :type (:list :integer)
@@ -184,7 +189,7 @@
 
   :documentation "Specification of a single Pauli term as a tensor product of Pauli factors.")
 
-(defmessage |ConjugateByCliffordRequest|
+(defmessage |ConjugateByCliffordRequest| ()
     ((|pauli|
       :documentation "Specification of a Pauli element."
       :type |PauliTerm|
@@ -197,7 +202,7 @@
 
   :documentation "RPC request payload for conjugating a Pauli element by a Clifford element.")
 
-(defmessage |ConjugateByCliffordResponse|
+(defmessage |ConjugateByCliffordResponse| ()
     ((|phase|
       :documentation "Encoded global phase factor on the emitted Pauli."
       :type :integer
@@ -210,7 +215,7 @@
 
   :documentation "RPC reply payload for a Pauli element as conjugated by a Clifford element.")
 
-(defmessage |NativeQuilRequest|
+(defmessage |NativeQuilRequest| ()
     ((|quil|
       :documentation "Arbitrary Quil to be sent to quilc."
       :type :string
@@ -222,7 +227,7 @@
       :required t))
   :documentation "Quil and the device metadata necessary for quilc.")
 
-(defmessage |NativeQuilMetadata|
+(defmessage |NativeQuilMetadata| ()
     ((|final_rewiring|
       :documentation "Output qubit index relabeling due to SWAP insertion."
       :type (:list :integer)
@@ -259,7 +264,7 @@
       :required nil))
   :documentation "Metadata for a native quil program.")
 
-(defmessage |NativeQuilResponse|
+(defmessage |NativeQuilResponse| ()
     ((|quil|
       :documentation "Native Quil returned from quilc."
       :type :string
@@ -271,7 +276,31 @@
       :required nil))
   :documentation "Native Quil and associated metadata returned from quilc.")
 
-(defmessage |BinaryExecutableRequest|
+(defmessage |RewriteArithmeticRequest| ()
+    ((|quil|
+      :documentation "Native Quil for which to rewrite arithmetic parameters."
+      :type :string
+      :required t))
+  :documentation "A request type to handle compiling arithmetic out of gate parameters.")
+
+(defmessage |RewriteArithmeticResponse| ()
+    ((|quil|
+      :documentation "Native Quil rewritten with no arithmetic in gate parameters."
+      :type :string
+      :required t)
+
+     (|original_memory_descriptors|
+      :documentation "The declared memory descriptors in the Quil of the related request."
+      :type (:map :string -> |ParameterSpec|)
+      :required nil)
+
+     (|recalculation_table|
+      :documentation "A mapping from memory references to the original gate arithmetic."
+      :type (:map |ParameterAref| -> :string)
+      :required nil))
+  :documentation "The data needed to run programs with gate arithmetic on the hardware.")
+
+(defmessage |BinaryExecutableRequest| ()
     ((|quil|
       :documentation "Native Quil to be translated into an executable program."
       :type :string
@@ -283,7 +312,7 @@
       :required t))
   :documentation "Native Quil and the information needed to create binary executables.")
 
-(defmessage |BinaryExecutableResponse|
+(defmessage |BinaryExecutableResponse| ()
     ((|program|
       :documentation "Execution settings and sequencer binaries."
       :type :string
@@ -302,7 +331,7 @@
       :default nil))
   :documentation "Program to run on the QPU.")
 
-(defmessage |PyQuilExecutableResponse|
+(defmessage |PyQuilExecutableResponse| ()
     ((|program|
       :documentation "String representation of a Quil program."
       :type :string
@@ -314,7 +343,7 @@
       :required t))
   :documentation "rpcQ-serializable form of a pyQuil Program object.")
 
-(defmessage |QPURequest|
+(defmessage |QPURequest| ()
     ((|program|
       :documentation "Execution settings and sequencer binaries."
       :type :any
