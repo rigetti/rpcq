@@ -22,7 +22,7 @@ import zmq
 import zmq.asyncio
 
 from rpcq._base import to_msgpack, from_msgpack
-from rpcq._utils import rpc_request, RPCErrorError
+import rpcq._utils as utils
 from rpcq.messages import RPCError, RPCReply
 
 _log = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class Client:
         scheduled from this call is the one that receives this call's reply and instead rely on
         Events to signal across multiple _async_call/_recv_reply tasks.
         """
-        request = rpc_request(method_name, *args, **kwargs)
+        request = utils.rpc_request(method_name, *args, **kwargs)
         _log.debug("Sending request: %s", request)
 
         # setup an event to notify us when the reply is received (potentially by a task scheduled by
@@ -117,7 +117,7 @@ class Client:
 
         reply = self._replies.pop(request.id)
         if isinstance(reply, RPCError):
-            raise RPCErrorError(reply.error)
+            raise utils.RPCError(reply.error)
         else:
             return reply.result
 
@@ -142,7 +142,7 @@ class Client:
         :param float rpc_timeout: Timeout in seconds for Server response, set to None to disable the timeout
         :param kwargs: Keyword args that will be passed to the remote function
         """
-        request = rpc_request(method_name, *args, **kwargs)
+        request = utils.rpc_request(method_name, *args, **kwargs)
         _log.debug("Sending request: %s", request)
 
         self._socket.send_multipart([to_msgpack(request)])
@@ -173,7 +173,7 @@ class Client:
                 _log.debug('Discarding reply: %s', reply)
 
         if isinstance(reply, RPCError):
-            raise RPCErrorError(reply.error)
+            raise utils.RPCError(reply.error)
         else:
             return reply.result
 

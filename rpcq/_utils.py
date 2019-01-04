@@ -18,10 +18,10 @@ import uuid
 import warnings
 from typing import Optional, Tuple, Union
 
-from rpcq.messages import RPCRequest, RPCReply, RPCError
+import rpcq.messages
 
 
-def rpc_request(method_name: str, *args, **kwargs) -> RPCRequest:
+def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     """
     Create RPC request
 
@@ -33,7 +33,7 @@ def rpc_request(method_name: str, *args, **kwargs) -> RPCRequest:
     if args:
         kwargs['*args'] = args
 
-    return RPCRequest(
+    return rpcq.messages.RPCRequest(
         jsonrpc='2.0',
         id=str(uuid.uuid4()),
         method=method_name,
@@ -41,7 +41,7 @@ def rpc_request(method_name: str, *args, **kwargs) -> RPCRequest:
     )
 
 
-def rpc_reply(id: Union[str, int], result: Optional[object]) -> RPCReply:
+def rpc_reply(id: Union[str, int], result: Optional[object]) -> rpcq.messages.RPCReply:
     """
     Create RPC reply
 
@@ -49,14 +49,14 @@ def rpc_reply(id: Union[str, int], result: Optional[object]) -> RPCReply:
     :param result: Result
     :return: JSON RPC formatted dict
     """
-    return RPCReply(
+    return rpcq.messages.RPCReply(
         jsonrpc='2.0',
         id=id,
         result=result
     )
 
 
-def rpc_error(id: Union[str, int], error_msg: str) -> RPCError:
+def rpc_error(id: Union[str, int], error_msg: str) -> rpcq.messages.RPCError:
     """
     Create RPC error
 
@@ -64,7 +64,7 @@ def rpc_error(id: Union[str, int], error_msg: str) -> RPCError:
     :param error_msg: Error message
     :return: JSON RPC formatted dict
     """
-    return RPCError(
+    return rpcq.messages.RPCError(
         jsonrpc='2.0',
         id=id,
         error=error_msg)
