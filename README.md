@@ -1,7 +1,7 @@
 rpcq
 ====
 
-[![Build Status](https://semaphoreci.com/api/v1/projects/05f5d83c-3639-4160-bebb-014b98d30cf0/2275647/badge.svg)](https://semaphoreci.com/rigetti/rpcq)
+[![pipeline status](https://gitlab.com/rigetti/rpcq/badges/master/pipeline.svg)](https://gitlab.com/rigetti/rpcq/commits/master)
 
 The asynchronous RPC client-server framework and message specification for
 [Rigetti Quantum Cloud Services (QCS)](https://www.rigetti.com/).

@@ -1,0 +1,19 @@
+test-python:
+  tags:
+    - github
+  only:
+    - branches
+  image: python:3.6
+  script:
+    - pip install -r requirements.txt
+    - pytest
+
+test-lisp:
+  tags:
+    - github
+  only:
+    - branches
+  image: rigetti/quicklisp
+  script:
+    - make install-test-deps
+    - make test
