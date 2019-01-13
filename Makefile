@@ -13,7 +13,7 @@ all: test
 install-test-deps:
 ifeq ($(UNAME_S),Linux)
 ifeq ($(shell sed -n "s/^ID=//p" /etc/os-release),debian)
-	apt-get install -y libzmq-dev
+	apt-get install -y libzmq3-dev
 else
 	echo "Centos-based platforms unsupported"
 endif
