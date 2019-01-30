@@ -13,7 +13,7 @@ all: build
 install-test-deps:
 ifeq ($(UNAME_S),Linux)
 ifeq ($(shell sed -n "s/^ID=//p" /etc/os-release),debian)
-	apt-get install -y libzmq3-dev
+	apt-get install -y git libzmq3-dev
 else
 	echo "Centos-based platforms unsupported"
 endif
@@ -36,4 +36,4 @@ build:
 
 .PHONY: docker
 docker: Dockerfile
-		docker build -t rigetti/rpcq:$(COMMIT_HASH) .
+	docker build -t rigetti/rpcq:$(COMMIT_HASH) .
