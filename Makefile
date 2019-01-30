@@ -1,11 +1,10 @@
+COMMIT_HASH=$(shell git rev-parse --short HEAD)
 SBCL_BIN=sbcl
 SBCL=$(SBCL_BIN) --noinform --no-userinit --no-sysinit --non-interactive
-
 QUICKLISP_HOME=$(HOME)/quicklisp
 QUICKLISP_SETUP=$(QUICKLISP_HOME)/setup.lisp
 QUICKLISP=$(SBCL) --load $(QUICKLISP_HOME)/setup.lisp \
 	--eval '(push (truename ".") asdf:*central-registry*)'
-
 UNAME_S=$(shell uname -s)
 
 all: build
@@ -33,3 +32,8 @@ test:
 build:
 	$(QUICKLISP) \
 		 --eval "(ql:quickload :rpcq)"
+
+
+.PHONY: docker
+docker: Dockerfile
+		docker build -t rigetti/rpcq:$(COMMIT_HASH) .
