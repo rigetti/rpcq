@@ -8,8 +8,9 @@ QUICKLISP=$(SBCL) --load $(QUICKLISP_HOME)/setup.lisp \
 
 UNAME_S=$(shell uname -s)
 
-all: test
+all: build
 
+.PHONY: install-test-deps
 install-test-deps:
 ifeq ($(UNAME_S),Linux)
 ifeq ($(shell sed -n "s/^ID=//p" /etc/os-release),debian)
@@ -21,7 +22,14 @@ else
 	echo "Non-Linux-based platforms unsupported"
 endif
 
+.PHONY: install-build-deps
+install-build-deps: install-test-deps
+
 test:
 	$(QUICKLISP) \
 		 --eval "(ql:quickload :rpcq-tests)" \
 		 --eval '(asdf:test-system :rpcq)'
+
+build:
+	$(QUICKLISP) \
+		 --eval "(ql:quickload :rpcq)"
