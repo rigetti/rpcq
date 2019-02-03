@@ -12,7 +12,7 @@ Implements an efficient transport protocol by using [ZeroMQ](http://zeromq.org/)
 Not intended to be a full-featured replacement for other frameworks like
 [gRPC](https://grpc.io/) or [Apache Thrift](https://thrift.apache.org/).
 
-python Installation
+Python Installation
 -------------------
 
 To install directly from the source, run `pip install -e .` from within the top-level
@@ -118,12 +118,12 @@ open `rlwrap sbcl` and run:
 Running the Unit Tests
 ----------------------
 
-The `rpcq` repository is configured with SemaphoreCI to automatically run the Python unit tests.
-This can be done locally by running `pytest` from the top-level directory of the repository
-(assuming you have installed the test requirements).
+The `rpcq` repository is configured with GitLab CI to automatically run the unit tests.
 
-There is additionally a very small suite of Lisp tests for `rpcq`. These are not run by
-SemaphoreCI, but can be run locally by doing the following from within `rlwrap sbcl`:
+The Python unit tests can be executed locally by running `pytest` from the top-level
+directory of the repository (assuming you have installed the test requirements).
+
+The Lisp unit tests can be run locally by doing the following from within `rlwrap sbcl`:
 
 ```lisp
 (ql:quickload :rpcq)
@@ -137,6 +137,13 @@ there should be something near the bottom of the output that looks like:
 RPCQ-TESTS (Suite)
   TEST-DEFMESSAGE                                                         [ OK ]
 ```
+
+Automated Packaging with Docker
+-------------------------------
+
+The CI pipeline for `rpcq` produces a Docker image, available at
+[`rigetti/rpcq`](https://hub.docker.com/r/rigetti/rpcq). To get the latest stable
+version of `rpcq`, run `docker pull rigetti/rpcq`.
 
 Authors
 -------
