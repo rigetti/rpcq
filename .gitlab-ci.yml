@@ -24,7 +24,7 @@ test-lisp:
     - make install-test-deps
     - make test
 
-docker-master:
+docker-edge:
   stage: package
   tags:
     - dockerd
@@ -33,9 +33,9 @@ docker-master:
     - master
   image: docker:stable
   script:
-    - docker build --tag rigetti/rpcq:${CI_COMMIT_SHORT_SHA} --tag rigetti/rpcq:latest .
+    - docker build --tag rigetti/rpcq:${CI_COMMIT_SHORT_SHA} --tag rigetti/rpcq:edge .
     - echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
-    - docker push rigetti/rpcq && docker rmi -f rigetti/rpcq:latest
+    - docker push rigetti/rpcq && docker rmi -f rigetti/rpcq:edge
 
 docker-branch:
   stage: package
@@ -52,7 +52,7 @@ docker-branch:
     - echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
     - docker push rigetti/rpcq && docker rmi -f rigetti/rpcq:${CI_COMMIT_REF_SLUG}
 
-docker-vtag:
+docker-stable:
   stage: package
   tags:
     - dockerd
