@@ -145,6 +145,17 @@ The CI pipeline for `rpcq` produces a Docker image, available at
 [`rigetti/rpcq`](https://hub.docker.com/r/rigetti/rpcq). To get the latest stable
 version of `rpcq`, run `docker pull rigetti/rpcq`.
 
+Release Process
+---------------
+
+1. Update `VERSION.txt` and dependency versions (if applicable) and push the commit to `master`.
+2. Push a git tag `vX.Y.Z` that contains the same version number as in `VERSION.txt`.
+3. Verify that the resulting build (triggered by pushing the tag) completes successfully.
+4. Push the tagged commit to `pypi` and verify it appears [here](https://pypi.org/project/rpcq/).
+5. Publish a [release](https://github.com/rigetti/rpcq/releases) using the tag as the name.
+6. Close the [milestone](https://github.com/rigetti/rpcq/milestones) associated with this release,
+   and migrate incomplete issues to the next one.
+
 Authors
 -------
 
