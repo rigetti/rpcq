@@ -154,7 +154,7 @@ Release Process
 4. Push the tagged commit to `pypi` and verify it appears [here](https://pypi.org/project/rpcq/).
 5. Publish a [release](https://github.com/rigetti/rpcq/releases) using the tag as the name.
 6. Close the [milestone](https://github.com/rigetti/rpcq/milestones) associated with this release,
-   and migrate incomplete issues to the next release milestone (create it if it doesn't exist).
+   and migrate incomplete issues to the next one.
 
 Authors
 -------
