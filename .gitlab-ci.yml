@@ -2,9 +2,6 @@ include:
   - project: rigetti/ci
     file: pipelines/docker.gitlab-ci.yml
 
-variables:
-  IMAGE: rigetti/rpcq
-
 test-python:
   stage: test
   tags:
