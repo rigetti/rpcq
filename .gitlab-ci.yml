@@ -10,9 +10,11 @@ test-python:
   tags:
     - github
   only:
-    - branches
+    refs:
+      - branches
   image: python:3.6
   script:
+    - python --version
     - pip install -r requirements.txt
     - pytest
 
@@ -21,8 +23,10 @@ test-lisp:
   tags:
     - github
   only:
-    - branches
+    refs:
+      - branches
   image: rigetti/quicklisp
   script:
+    - sbcl --version
     - make install-test-deps
     - make test
