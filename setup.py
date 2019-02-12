@@ -28,7 +28,7 @@ with open('rpcq/version.py', 'r') as f:
 
 # overwrite version.py in the source distribution
 with open('rpcq/version.py', 'w') as f:
-    f.write(f'__version__ = \'{__version__}\'\n')
+    f.write("__version__ = \'{}\'\n".(__version__))
 
 setup(
     name='rpcq',
