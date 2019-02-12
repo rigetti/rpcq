@@ -343,6 +343,7 @@ LIMITATIONS:
            (defmethod shared-initialize ((instance ,class-name) slot-names
                                          &rest initargs
                                          &key &allow-other-keys)
+             (declare (ignore initargs))
              ,@(mapcan #'slot-initialization-deprecation-warnings field-specs)
              (call-next-method))
            
