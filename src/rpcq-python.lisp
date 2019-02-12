@@ -222,7 +222,7 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                    (push (list slot-name nil required "None") deprecated-fields)))
                 ;; recipe for a deprecating slot
                 (deprecates
-                 (let ((definite-default (or (python-argspec-default type default) "None")))
+                 (let ((definite-default (python-argspec-default type default)))
                    (python-out `(("    ~a: ~a = ~a"      ,(symbol-name slot-name)
                                                          ,(python-maybe-optional-typing-type type t)
                                                          ,definite-default)
