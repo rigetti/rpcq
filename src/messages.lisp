@@ -359,3 +359,104 @@
       :type :string
       :required t))
   :documentation "Program and patch values to send to the QPU for execution.")
+
+(defmessage |MultishotRequest| ()
+  ((|quil|
+    :documentation "Quil code to run during QVM experiment"
+    :type :string
+    :required t)
+   (|addresses|
+    :documentation "Classical memory addresses"
+    ;; TODO Can this type be better. Should a map of string -> (or (list of non-neg ints) t) 
+    :type (:map :string -> :any)
+    :required t)
+   (|trials|
+    :documentation "Number of shots to run for the experiment"
+    :type :integer
+    :required t)
+   (|gate-noise|
+    :documentation ""
+    :type (:list :integer))
+   (|measurement-noise|
+    :documentation ""
+    :type (:list :integer)))
+  :documentation "Perform multishot experiment")
+
+(defmessage |MultishotResponse| ()
+  ((|results|
+   ;; TODO docstring
+    :documentation "Results of performing multishot experiment"
+    :type (:map :string -> (:list :integer))
+    :required t))
+  :documentation "Results of performing multishot experiment")
+
+(defmessage |MultishotMeasureRequest| ()
+  ((|quil|
+    :documentation "Quil code to run during QVM experiment"
+    :type :string
+    :required t)
+   (|qubits|
+    :documentation "Classical memory addresses"
+    ;; TODO Can this type be better. Should a map of string -> (or (list of non-neg ints) t) 
+    :type (:list :integer)
+    :required t)
+   (|trials|
+    :documentation "Number of shots to run for the experiment"
+    :type :integer
+    :required t)
+   (|gate-noise|
+    :documentation ""
+    :type (:list :integer))
+   (|measurement-noise|
+    :documentation ""
+    :type (:list :integer)))
+  :documentation "Perform a multishot-measure experiment")
+
+(defmessage |MultishotMeasureResponse| ()
+  ((|results|
+    ;; TODO docstring
+    :documentation "Results of performing multishot-measure experiment"
+    :type (:map :string -> (:list :integer))))
+  :documentation "Results of performing multishot-measure experiment")
+
+(defmessage |ExpectationRequest| ()
+  ((|state-preparation|
+    :documentation "Quil code that prepares the wavefunction of interest"
+    :type :string
+    :required t)
+   (|operators|
+    :documentation "The operator for which the expectation value should be computed"
+    :type (:list :string)
+    :required t)
+   (|gate-noise|
+    :documentation ""
+    :type (:list :integer))
+   (|measurement-noise|
+    :documentation ""
+    :type (:list :integer)))
+  :documentation "Compute list of real-valued expectations of operators")
+
+(defmessage |ExpectationResponse| ()
+  ((|results|    
+    :documentation "List of computed real expectation values for given operators"
+    :type (:list :integer)))
+  :documentation "List of computed real expectation values for given operators")
+
+(defmessage |WavefunctionRequest| ()
+  ((|quil|
+    :documentation "Quil code"
+    :type :string
+    :required t)
+   (|gate-noise|
+    :documentation ""
+    :type (:list :integer))
+   (|measurement-noise|
+    :documentation ""
+    :type (:list :integer)))
+  :documentation "Inspect the wavefunction amplitudes")
+
+(defmessage |WavefunctionResponse| ()
+  ((|results|
+    :documentation "List of computed real expectation values for given operators"
+    :type (:list :bytes)))
+  :documentation "List of computed real expectation values for given operators")
