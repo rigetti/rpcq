@@ -240,7 +240,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
         
         ;; this is where errors go where we can't even reply to the client
         (simple-error (c)
-          (cl-syslog:format-log logger ':error
+          (cl-syslog:format-log logger ':err
                                 "Threw generic error before RPC call:~%~a" c))))))
 
 (defun start-server (&key
