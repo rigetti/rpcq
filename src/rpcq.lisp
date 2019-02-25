@@ -32,7 +32,8 @@
 
 
 (deftype atom-type ()
-  '(member :string :bytes :bool :float :integer :any))
+  '(member :string :bytes :bool :float :complex :integer :any))
+
 
 
 (defun format-documentation-string (string)
@@ -76,6 +77,30 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
           :do (setf (gethash (%serialize k) hash) (%serialize v)))
     hash))
 
+;; This is just for keeping up appearences. The real encoding/decoding
+;; is done in %(de)serialize-complex.
+(defmethod %serialize ((payload complex))
+  payload)
+
+(defun %serialize-complex (data stream)
+  (mpk::encode-fixext-16 (append (flexi-streams:with-output-to-sequence (s :as-list t)
+                                   (mpk::encode-float (realpart data) s t))
+                                 (flexi-streams:with-output-to-sequence (s :as-list t)
+                                   (mpk::encode-float (imagpart data) s t)))
+                         stream
+                         0))
+
+(defun %deserialize-complex (len stream)
+  (declare (ignore len))
+  (let ((realbytes-hi (mpk::load-big-endian stream 4))
+        (realbytes-low (mpk::load-big-endian stream 4))
+        (imagbytes-hi (mpk::load-big-endian stream 4))
+        (imagbytes-low (mpk::load-big-endian stream 4)))
+    (complex (sb-kernel:make-double-float realbytes-hi realbytes-low)
+             (sb-kernel:make-double-float imagbytes-hi imagbytes-low))))
+
+(mpk:register-extension-dispatcher 0 #'complexp #'%serialize-complex #'%deserialize-complex)
+
 (defgeneric %deserialize (payload)
   (:documentation "Reconstruct objects that have already been converted to Lisp objects."))
 
@@ -100,6 +125,10 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
                 :do (setf (gethash k result) (%deserialize v)))
           result))))
 
+;; This is just for keeping up appearences.
+(defmethod %deserialize ((payload complex))
+  payload)
+
 (defmethod %deserialize (payload)
   payload)
 
@@ -117,7 +146,7 @@ whether the field is REQUIRED and a specified DEFAULT value.
 
 The primitive field types must be specified as one of
 
-  :string :bytes :integer :float :bool
+  :string :bytes :integer :complex :float :bool
 
 Message field types are specified by their class name, e.g. for
 a Calibration message the field type is
@@ -129,7 +158,7 @@ List and mapping field types are specified as
   (:list x) (:map :string -> x)
 
 where x is one of
-{:string, :bytes, :any, :integer, :float, :bool, :list, :mapping} or a
+{:string, :bytes, :any, :integer, :complex, :float, :bool, :list, :mapping} or a
 message field type. We currently only support :string keys for
 mappings as JSON does not support other kinds of keys but we
 nonetheless explicitly include the key type for better readability
@@ -153,7 +182,7 @@ We distinguish between the following options for any field type:
 "
   (cond
 
-    ;; handle :string :integer :float :bool :bytes
+    ;; handle :string :integer :float :complex :bool :bytes
     ((keywordp field-type)
      (check-type field-type atom-type)
      (let*
@@ -161,6 +190,7 @@ We distinguish between the following options for any field type:
                               :bytes (simple-array (unsigned-byte 8))
                               :integer fixnum
                               :float double-float
+                              :complex complex
                               :bool boolean
                               :any t)
                             field-type))
