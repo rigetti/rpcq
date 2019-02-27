@@ -156,7 +156,7 @@ class Client:
             # Need to keep track of timeout manually in case this loop runs more than once. We subtract off already
             # elapsed time from the timeout. The call to max is to make sure we don't send a negative value
             # which would throw an error.
-            timeout = max((start_time + rpc_timeout - time.time()) * 1000, 0) if rpc_timeout is not None else None
+            timeout = max((start_time + rpc_timeout - time.time()) * 1e6, 0) if rpc_timeout is not None else None
             if self._socket.poll(timeout) == 0:
                 raise TimeoutError(f"Timeout on client {self.endpoint}, method name {method_name}, class info: {self}")
 
