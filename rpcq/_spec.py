@@ -31,7 +31,7 @@ class RPCSpec(object):
     """
     Class for keeping track of class methods that are exposed to the JSON RPC interface
     """
-    def __init__(self, *, provide_tracebacks: bool = True):
+    def __init__(self, *, provide_tracebacks: bool = True, catch_exceptions: bool = True):
         """
         Create a JsonRpcSpec object.
 
@@ -64,6 +64,7 @@ class RPCSpec(object):
         """
         self._json_rpc_methods = {}
         self.provide_tracebacks = provide_tracebacks
+        self.catch_exceptions = catch_exceptions
 
     def add_handler(self, f):
         """
@@ -114,11 +115,14 @@ class RPCSpec(object):
                 result = await result
 
         except Exception as e:
-            _traceback = traceback.format_exc()
-            _log.error(_traceback)
-            if self.provide_tracebacks:
-                return rpc_error(request.id, "{}\n{}".format(str(e), _traceback))
+            if self.catch_exceptions:
+                _traceback = traceback.format_exc()
+                _log.error(_traceback)
+                if self.provide_tracebacks:
+                    return rpc_error(request.id, "{}\n{}".format(str(e), _traceback))
+                else:
+                    return rpc_error(request.id, str(e))
             else:
-                return rpc_error(request.id, str(e))
+                raise e
 
         return rpc_reply(request.id, result)

@@ -35,15 +35,17 @@ class Server:
     """
     Server that accepts JSON RPC calls through a socket.
     """
-    def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False):
+    def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False,
+                 catch_exceptions: bool = True):
         """
         Create a server that will be linked to a socket
 
         :param rpc_spec: JSON RPC spec
         """
         self.announce_timing = announce_timing
+        self.catch_exceptions = catch_exceptions
 
-        self.rpc_spec = rpc_spec if rpc_spec else RPCSpec()
+        self.rpc_spec = rpc_spec if rpc_spec else RPCSpec(catch_exceptions=catch_exceptions)
         self._exit_handlers = []
 
         self._socket = None
@@ -74,17 +76,38 @@ class Server:
         """
         self._connect(endpoint)
 
-        while True:
-            try:
-                # empty_frame may either be:
-                # 1. a single null frame if the client is a REQ socket
-                # 2. an empty list (ie. no frames) if the client is a DEALER socket
-                identity, *empty_frame, msg = await self._socket.recv_multipart()
-                request = from_msgpack(msg)
+        # spawn an initial listen task
+        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+        task_list = [listen_task]
 
-                asyncio.ensure_future(self._process_request(identity, empty_frame, request))
-            except Exception:
-                _log.exception('Exception thrown in Server run loop')
+        while True:
+            dones, pendings = await asyncio.wait(task_list, return_when=asyncio.FIRST_COMPLETED)
+            task_list = list(pendings)
+
+            for done in dones:
+                if done == listen_task:
+                    # empty_frame may either be:
+                    # 1. a single null frame if the client is a REQ socket
+                    # 2. an empty list (ie. no frames) if the client is a DEALER socket
+                    identity, *empty_frame, msg = done.result()
+                    request = from_msgpack(msg)
+
+                    # spawn a processing task
+                    task_list.append(asyncio.ensure_future(
+                        self._process_request(identity, empty_frame, request)))
+
+                    # spawn a new listen task
+                    listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+                    task_list.append(listen_task)
+                else:
+                    # if there's been an exception, consider reraising it
+                    try:
+                        done.result()
+                    except Exception as e:
+                        if self.catch_exceptions:
+                            _log.exception('Exception thrown in Server run loop')
+                        else:
+                            raise e
 
     def run(self, endpoint: str, loop: AbstractEventLoop = None):
         """
@@ -151,5 +174,9 @@ class Server:
 
             _log.debug("Sending client %s reply: %s", identity, reply)
             await self._socket.send_multipart([identity, *empty_frame, to_msgpack(reply)])
-        except Exception:
-            _log.exception('Exception thrown in _process_request')
+        except Exception as e:
+            if self.catch_exceptions:
+                _log.exception('Exception thrown in _process_request')
+            else:
+                raise e
+
