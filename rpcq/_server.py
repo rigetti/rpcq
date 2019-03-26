@@ -83,46 +83,53 @@ class Server:
         """
         self._connect(endpoint)
 
+        async def run_async_loop(task_list, listen_task):
+            dones, pendings = await asyncio.wait(task_list, return_when=asyncio.FIRST_COMPLETED)
+
+            # grab one "done" task to handle
+            task_list, done_list = list(pendings), list(dones)
+            done = done_list.pop()
+            task_list += done_list
+
+            if done == listen_task:
+                try:
+                    # empty_frame may either be:
+                    # 1. a single null frame if the client is a REQ socket
+                    # 2. an empty list (ie. no frames) if the client is a DEALER socket
+                    identity, *empty_frame, msg = done.result()
+                    request = from_msgpack(msg)
+
+                    # spawn a processing task
+                    task_list.append(asyncio.ensure_future(
+                        self._process_request(identity, empty_frame, request)))
+                except Exception as e:
+                    if self.serialize_exceptions:
+                        _log.exception('Exception thrown in Server run loop during request '
+                                       'reception: {}'.format(str(e)))
+                    else:
+                        raise e
+                finally:
+                    # spawn a new listen task
+                    listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+                    task_list.append(listen_task)
+                    await run_async_loop(task_list, listen_task)
+            else:
+                # if there's been an exception during processing, consider reraising it
+                try:
+                    done.result()
+                except Exception as e:
+                    if self.serialize_exceptions:
+                        _log.exception('Exception thrown in Server run loop during request '
+                                       'dispatch: {}'.format(str(e)))
+                    else:
+                        raise e
+                finally:
+                    await run_async_loop(task_list, listen_task)
+
         # spawn an initial listen task
         listen_task = asyncio.ensure_future(self._socket.recv_multipart())
         task_list = [listen_task]
-
-        while True:
-            dones, pendings = await asyncio.wait(task_list, return_when=asyncio.FIRST_COMPLETED)
-            task_list = list(pendings)
-
-            for done in dones:
-                if done == listen_task:
-                    try:
-                        # empty_frame may either be:
-                        # 1. a single null frame if the client is a REQ socket
-                        # 2. an empty list (ie. no frames) if the client is a DEALER socket
-                        identity, *empty_frame, msg = done.result()
-                        request = from_msgpack(msg)
-
-                        # spawn a processing task
-                        task_list.append(asyncio.ensure_future(
-                            self._process_request(identity, empty_frame, request)))
-                    except Exception as e:
-                        if self.serialize_exceptions:
-                            _log.exception('Exception thrown in Server run loop during request '
-                                           'reception: {}'.format(str(e)))
-                        else:
-                            raise e
-                    finally:
-                        # spawn a new listen task
-                        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
-                        task_list.append(listen_task)
-                else:
-                    # if there's been an exception, consider reraising it
-                    try:
-                        done.result()
-                    except Exception as e:
-                        if self.serialize_exceptions:
-                            _log.exception('Exception thrown in Server run loop during request '
-                                           'dispatch: {}'.format(str(e)))
-                        else:
-                            raise e
+        await run_async_loop(task_list, listen_task)
 
     def run(self, endpoint: str, loop: AbstractEventLoop = None):
         """
