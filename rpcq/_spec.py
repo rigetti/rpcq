@@ -31,7 +31,7 @@ class RPCSpec(object):
     """
     Class for keeping track of class methods that are exposed to the JSON RPC interface
     """
-    def __init__(self, *, provide_tracebacks: bool = True, catch_exceptions: bool = True):
+    def __init__(self, *, provide_tracebacks: bool = True, serialize_exceptions: bool = True):
         """
         Create a JsonRpcSpec object.
 
@@ -61,10 +61,14 @@ class RPCSpec(object):
             implementations will have their tracebacks forwarded to the calling client as part of
             the generated RPCError reply objject. If set to False, the generated RPCError reply will
             omit this information (but the traceback will still get written to the logfile).
+        :param serialize_exceptions: If set to True, unhandled exceptions which occur during RPC
+            call implementations will be serialized into RPCError messages (which the Server
+            instance will then probably send to the corresponding Client).  If set to False, the
+            exception is re-raised and left for the local caller to handle further.
         """
         self._json_rpc_methods = {}
         self.provide_tracebacks = provide_tracebacks
-        self.catch_exceptions = catch_exceptions
+        self.serialize_exceptions = serialize_exceptions
 
     def add_handler(self, f):
         """
@@ -115,7 +119,7 @@ class RPCSpec(object):
                 result = await result
 
         except Exception as e:
-            if self.catch_exceptions:
+            if self.serialize_exceptions:
                 _traceback = traceback.format_exc()
                 _log.error(_traceback)
                 if self.provide_tracebacks:

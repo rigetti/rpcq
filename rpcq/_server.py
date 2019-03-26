@@ -36,16 +36,22 @@ class Server:
     Server that accepts JSON RPC calls through a socket.
     """
     def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False,
-                 catch_exceptions: bool = True):
+                 serialize_exceptions: bool = True):
         """
         Create a server that will be linked to a socket
 
         :param rpc_spec: JSON RPC spec
+        :param announce_timing:
+        :param serialize_exceptions: If set to True, this Server will catch all exceptions occurring
+            internally to it and, when possible, communicate them to the interrogating Client.  If
+            set to False, this Server will re-raise any exceptions it encounters (including, but not
+            limited to, those which might occur through method calls to rpc_spec) for Server's
+            local owner to handle.  This *often* means an unrecoverable crash of the Server.
         """
         self.announce_timing = announce_timing
-        self.catch_exceptions = catch_exceptions
+        self.serialize_exceptions = serialize_exceptions
 
-        self.rpc_spec = rpc_spec if rpc_spec else RPCSpec(catch_exceptions=catch_exceptions)
+        self.rpc_spec = rpc_spec if rpc_spec else RPCSpec(serialize_exceptions=serialize_exceptions)
         self._exit_handlers = []
 
         self._socket = None
@@ -86,26 +92,34 @@ class Server:
 
             for done in dones:
                 if done == listen_task:
-                    # empty_frame may either be:
-                    # 1. a single null frame if the client is a REQ socket
-                    # 2. an empty list (ie. no frames) if the client is a DEALER socket
-                    identity, *empty_frame, msg = done.result()
-                    request = from_msgpack(msg)
+                    try:
+                        # empty_frame may either be:
+                        # 1. a single null frame if the client is a REQ socket
+                        # 2. an empty list (ie. no frames) if the client is a DEALER socket
+                        identity, *empty_frame, msg = done.result()
+                        request = from_msgpack(msg)
 
-                    # spawn a processing task
-                    task_list.append(asyncio.ensure_future(
-                        self._process_request(identity, empty_frame, request)))
-
-                    # spawn a new listen task
-                    listen_task = asyncio.ensure_future(self._socket.recv_multipart())
-                    task_list.append(listen_task)
+                        # spawn a processing task
+                        task_list.append(asyncio.ensure_future(
+                            self._process_request(identity, empty_frame, request)))
+                    except Exception as e:
+                        if self.serialize_exceptions:
+                            _log.exception('Exception thrown in Server run loop during request '
+                                           'reception: {}'.format(str(e)))
+                        else:
+                            raise e
+                    finally:
+                        # spawn a new listen task
+                        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+                        task_list.append(listen_task)
                 else:
                     # if there's been an exception, consider reraising it
                     try:
                         done.result()
                     except Exception as e:
-                        if self.catch_exceptions:
-                            _log.exception('Exception thrown in Server run loop')
+                        if self.serialize_exceptions:
+                            _log.exception('Exception thrown in Server run loop during request '
+                                           'dispatch: {}'.format(str(e)))
                         else:
                             raise e
 
@@ -175,7 +189,7 @@ class Server:
             _log.debug("Sending client %s reply: %s", identity, reply)
             await self._socket.send_multipart([identity, *empty_frame, to_msgpack(reply)])
         except Exception as e:
-            if self.catch_exceptions:
+            if self.serialize_exceptions:
                 _log.exception('Exception thrown in _process_request')
             else:
                 raise e
