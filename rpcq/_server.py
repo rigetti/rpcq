@@ -46,8 +46,10 @@ class Server:
             internally to it and, when possible, communicate them to the interrogating Client.  If
             set to False, this Server will re-raise any exceptions it encounters (including, but not
             limited to, those which might occur through method calls to rpc_spec) for Server's
-            local owner to handle.  Although the Server tries to keep its main event loop alive,
-            this *can mean* an unrecoverable crash of the Server and should be used cautiously.
+            local owner to handle.
+
+            IMPORTANT NOTE: This *almost definitely* means an unrecoverable crash, and the Server
+            should then be _shutdown().
         """
         self.announce_timing = announce_timing
         self.serialize_exceptions = serialize_exceptions
@@ -83,7 +85,11 @@ class Server:
         """
         self._connect(endpoint)
 
-        async def run_async_loop(task_list, listen_task):
+        # spawn an initial listen task
+        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+        task_list = [listen_task]
+
+        while True:
             dones, pendings = await asyncio.wait(task_list, return_when=asyncio.FIRST_COMPLETED)
 
             # grab one "done" task to handle
@@ -107,12 +113,12 @@ class Server:
                         _log.exception('Exception thrown in Server run loop during request '
                                        'reception: {}'.format(str(e)))
                     else:
+                        # NOTE: This is unrecoverable.
                         raise e
                 finally:
                     # spawn a new listen task
                     listen_task = asyncio.ensure_future(self._socket.recv_multipart())
                     task_list.append(listen_task)
-                    await run_async_loop(task_list, listen_task)
             else:
                 # if there's been an exception during processing, consider reraising it
                 try:
@@ -122,14 +128,8 @@ class Server:
                         _log.exception('Exception thrown in Server run loop during request '
                                        'dispatch: {}'.format(str(e)))
                     else:
+                        # NOTE: This is unrecoverable.
                         raise e
-                finally:
-                    await run_async_loop(task_list, listen_task)
-
-        # spawn an initial listen task
-        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
-        task_list = [listen_task]
-        await run_async_loop(task_list, listen_task)
 
     def run(self, endpoint: str, loop: AbstractEventLoop = None):
         """
