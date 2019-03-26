@@ -46,7 +46,8 @@ class Server:
             internally to it and, when possible, communicate them to the interrogating Client.  If
             set to False, this Server will re-raise any exceptions it encounters (including, but not
             limited to, those which might occur through method calls to rpc_spec) for Server's
-            local owner to handle.  This *often* means an unrecoverable crash of the Server.
+            local owner to handle.  Although the Server tries to keep its main event loop alive,
+            this *can mean* an unrecoverable crash of the Server and should be used cautiously.
         """
         self.announce_timing = announce_timing
         self.serialize_exceptions = serialize_exceptions
