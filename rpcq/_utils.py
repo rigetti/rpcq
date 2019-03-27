@@ -21,6 +21,10 @@ from typing import Optional, Tuple, Union
 import rpcq.messages
 
 
+def rpc_warning(warning) -> rpcq.messages.RPCWarning:
+    return rpcq.messages.RPCWarning(body=str(warning),
+                                    kind=str(type(warning)))
+
 def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     """
     Create RPC request
@@ -41,33 +45,39 @@ def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     )
 
 
-def rpc_reply(id: Union[str, int], result: Optional[object]) -> rpcq.messages.RPCReply:
+def rpc_reply(id: Union[str, int], result: Optional[object],
+              warnings: List[Any] = []) -> rpcq.messages.RPCReply:
     """
     Create RPC reply
 
     :param str|int id: Request ID
     :param result: Result
+    :param warning: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
     return rpcq.messages.RPCReply(
         jsonrpc='2.0',
         id=id,
-        result=result
+        result=result,
+        warnings=[rpc_warning(warning) for warning in warnings]
     )
 
 
-def rpc_error(id: Union[str, int], error_msg: str) -> rpcq.messages.RPCError:
+def rpc_error(id: Union[str, int], error_msg: str,
+              warnings: List[Any] = []) -> rpcq.messages.RPCError:
     """
     Create RPC error
 
     :param id: Request ID
     :param error_msg: Error message
+    :param warning: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
     return rpcq.messages.RPCError(
         jsonrpc='2.0',
         id=id,
-        error=error_msg)
+        error=error_msg,
+        warnings=[rpc_warning(warning) for warning in warnings])
 
 
 def get_input(params: Union[dict, list]) -> Tuple[list, dict]:
