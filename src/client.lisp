@@ -122,7 +122,7 @@
                (|RPCError|
                 (cond
                   ((string= uuid (|RPCError-id| unpacked-reply))
-                   (dolist (rpc-warning (|RPCReply-warnings| unpacked-reply))
+                   (dolist (rpc-warning (|RPCError-warnings| unpacked-reply))
                      (warn "Warning during RPC call: ~a: ~a"
                            (|RPCWarning-kind| rpc-warning)
                            (|RPCWarning-body| rpc-warning)))
