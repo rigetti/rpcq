@@ -179,8 +179,6 @@ class Client:
         if isinstance(reply, RPCError):
             raise utils.RPCError(reply.error)
         else:
-            for warning in reply.warnings:
-                warn(f"{warning.kind}: {warning.body}")
             return reply.result
 
     def close(self):
