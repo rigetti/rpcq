@@ -48,8 +48,8 @@ class Server:
             limited to, those which might occur through method calls to rpc_spec) for Server's
             local owner to handle.
 
-            IMPORTANT NOTE: This *almost definitely* means an unrecoverable crash, and the Server
-            should then be _shutdown().
+            IMPORTANT NOTE: When set to False, this *almost definitely* means an unrecoverable
+            crash, and the Server should then be _shutdown().
         """
         self.announce_timing = announce_timing
         self.serialize_exceptions = serialize_exceptions
@@ -113,7 +113,6 @@ class Server:
                         _log.exception('Exception thrown in Server run loop during request '
                                        'reception: {}'.format(str(e)))
                     else:
-                        # NOTE: This is unrecoverable.
                         raise e
                 finally:
                     # spawn a new listen task
@@ -128,7 +127,6 @@ class Server:
                         _log.exception('Exception thrown in Server run loop during request '
                                        'dispatch: {}'.format(str(e)))
                     else:
-                        # NOTE: This is unrecoverable.
                         raise e
 
     def run(self, endpoint: str, loop: AbstractEventLoop = None):
