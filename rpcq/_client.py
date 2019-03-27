@@ -175,7 +175,7 @@ class Client:
 
         for warning in reply.warnings:
             warn("{}: {}".format(warning.kind, warning.body))
-        
+
         if isinstance(reply, RPCError):
             raise utils.RPCError(reply.error)
         else:
