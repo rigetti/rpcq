@@ -46,7 +46,7 @@ def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
 
 
 def rpc_reply(id: Union[str, int], result: Optional[object],
-              warnings: List[Any] = []) -> rpcq.messages.RPCReply:
+              warnings: List[Warning] = None) -> rpcq.messages.RPCReply:
     """
     Create RPC reply
 
@@ -55,6 +55,8 @@ def rpc_reply(id: Union[str, int], result: Optional[object],
     :param warning: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
+    warnings = warnings or list()
+
     return rpcq.messages.RPCReply(
         jsonrpc='2.0',
         id=id,
