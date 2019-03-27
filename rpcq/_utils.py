@@ -16,7 +16,7 @@
 """Utils for message passing"""
 import uuid
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List, Any
 
 import rpcq.messages
 
