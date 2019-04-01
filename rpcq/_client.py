@@ -174,7 +174,7 @@ class Client:
                 _log.debug('Discarding reply: %s', reply)
 
         for warning in reply.warnings:
-            warn("{}: {}".format(warning.kind, warning.body))
+            warn(f"{warning.kind}: {warning.body}")
 
         if isinstance(reply, RPCError):
             raise utils.RPCError(reply.error)

@@ -161,10 +161,10 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
        (handler-case
            (let (request result reply start-time warnings)
              (handler-bind
-                 ((warning #'(lambda (c) (push (make-instance '|RPCWarning|
-                                                              :|body| (format nil "~a" c)
-                                                              :|kind| (format nil "~a" (type-of c)))
-                                               warnings))))
+                 ((warning (lambda (c) (push (make-instance '|RPCWarning|
+                                                            :|body| (princ-to-string c)
+                                                            :|kind| (princ-to-string (type-of c)))
+                                             warnings))))
                (macrolet ((log-completion-message (priority control &rest args)
                             `(cl-syslog:rfc-log (logger ,priority ,control ,@args)
                                (:msgid "LOG0002")
@@ -241,7 +241,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                c)
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
-                                                  :|error| (format nil "~a" c)
+                                                  :|error| (princ-to-string c)
                                                   :|warnings| (reverse warnings)))))
                    
                    ;; send the client response, whether success or failure
