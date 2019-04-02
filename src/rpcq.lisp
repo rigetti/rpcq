@@ -44,20 +44,20 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 
 (defun to-octets (string)
   "Convert a string S to a vector of 8-bit unsigned bytes"
-  (map 'simple-vector 'char-code string))
+  (flexi-streams:string-to-octets string :external-format ':utf8))
 
 (defun to-string (octets)
   "Convert a vector of octets to a string"
-  (map 'string 'code-char octets))
+  (flexi-streams:octets-to-string octets :external-format ':utf8))
 
 
 (defun serialize (obj &optional stream)
   "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."
   (let ((messagepack:*encode-alist-as-map* nil))
-    (typecase stream
+    (etypecase stream
       (stream
        (messagepack:encode-stream (%serialize obj) stream))
-      (otherwise
+      (null
        (messagepack:encode (%serialize obj))))))
 
 (defgeneric %serialize (payload)
@@ -67,12 +67,16 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
   payload)
 
 (defmethod %serialize ((payload cons))
-  (loop :for elt :in payload :collect (%serialize elt)))
+  (cond
+    ((alexandria:proper-list-p payload)
+     (loop :for elt :in payload :collect (%serialize elt)))
+    (t
+     (error "Can only serialize proper lists, not raw conses. Got ~S" payload))))
 
 (defmethod %serialize ((payload hash-table))
   (let ((hash (make-hash-table :test #'equal)))
     (loop :for k :being :the :hash-keys :of payload
-          :using (hash-value v)
+            :using (hash-value v)
           :do (setf (gethash (%serialize k) hash) (%serialize v)))
     hash))
 
@@ -106,7 +110,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defun deserialize (payload)
   "Deserialize the object(s) encoded in PAYLOAD (string or stream)."
   (etypecase payload
-    (array
+    (vector
      (%deserialize (messagepack:decode payload)))
     (stream
      (%deserialize (messagepack:decode-stream payload)))))
