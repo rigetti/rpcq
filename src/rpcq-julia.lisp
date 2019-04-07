@@ -25,15 +25,49 @@
 (defparameter *julia-types*
   '(:string "String"
     :float "Float32"
-    :int "Int32"
+    :integer "Int32"
     :bool "Bool"
+    :map "Dict"
+    :list "Array"
     :any "Any"))
 
 (defun julia-type (field-type)
-  (assert (member field-type *julia-types*)
-          (field-type)
-          "Unknown field-type ~S" field-type)
-  (getf *julia-types* field-type))
+  (etypecase field-type
+    (keyword
+     (assert (member field-type *julia-types*)
+             (field-type)
+             "Unknown field-type ~S" field-type)
+     (getf *julia-types* field-type))
+    (symbol
+     (format nil "~A" field-type))
+    ((cons (eql :list))
+     (format nil "Array{~A}" (julia-type (rest field-type))))
+    ((cons (eql :map))
+     (assert (string= (symbol-name (third field-type)) "->")
+             (field-type)
+             "Bad mapping spec.")
+     (format nil
+             "Dict{~A, ~A}"
+             (julia-type (second field-type))
+             (julia-type (fourth field-type))))))
+
+(defun julia-optional-type (field-type required)
+  (let ((type (julia-type field-type)))
+    (if (or required (listp field-type))
+      type
+      (format nil "Union{~A, Nothing}" type))))
+
+(defun julia-default (field-type default)
+  (etypecase field-type
+    (keyword
+      (case field-type
+        (:string (format nil "~S" default))
+        (:bytes (format nil "b~S" (to-string default)))
+        (:bool (if default "true" "false"))
+        (:integer (format nil "~D" default))
+        (:float (format nil "~E" default))))
+    ((cons (eql :list)) "[]")
+    ((cons (eql :map)) "{}")))
 
 (defun julia-field (field-spec)
   (let* ((slot-name (first field-spec))
@@ -41,10 +75,14 @@
          (type (getf field-settings :type))
          (required (getf field-settings :required))
          (documentation (getf field-settings :documentation))
-         (default (getf field-settings :default)))
+         (default (getf field-settings :default))
+         (defaultp (member :default field-settings)))
     (list
       (format nil "\"~A\"" documentation)
-      (format nil "~A::~A" slot-name (julia-type type)))))
+      (format nil "~A::~A~@[ = ~A~]"
+        slot-name
+        (julia-optional-type type required)
+        (if (or (not required) defaultp) (julia-default type default))))))
 
 (defun julia-struct (message-spec)
   (destructuring-bind (msg-name parent-name field-specs documentation) message-spec
@@ -54,7 +92,7 @@
 \"\"\"
 ~A
 \"\"\"
-@kwdef struct ~A
+Base.@kwdef struct ~A
 ~{    ~{~A
 ~^    ~}~^
 ~}end" documentation msg-name (mapcar #'julia-field field-specs))))
