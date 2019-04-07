@@ -49,26 +49,22 @@
         :type :string
         :required t
         :default "a string"
-        :documentation "String docs."
-        )
+        :documentation "String docs.")
        (flt
         :type :float
         :required t
         :default 0.0
-        :documentation "A float."
-        )
-       )
-    :documentation "Test message"
-    )
+        :documentation "A float."))
+
+    :documentation "Test message")
+
   (let ((m (make-instance 'my-msg :required-int 5)))
     (is (= (my-msg-required-int m)) 5)
     (is (= (hash-table-count (my-msg-optional-map m)) 1))
     (is (string= (gethash "yo" (my-msg-optional-map m)) "working"))
     (is (length rpcq::*messages*) 1)
     (is (typep (my-msg-flt m) 'double-float))
-    (is (string= (my-msg-str m) "a string"))
-    )
-  )
+    (is (string= (my-msg-str m) "a string"))))
 
 (deftest test-serialize-deserialize ()
   (let* ((original (make-instance 'rpcq::|RPCRequest|

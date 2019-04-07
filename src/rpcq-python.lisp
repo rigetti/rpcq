@@ -32,21 +32,6 @@
     :list "List"
     :any "Any"))
 
-(defparameter *python-instance-check-types*
-  '(:string "basestring"
-    :bytes "bytes"
-    :float "float"
-    :integer "int"
-    :bool "bool"
-    :map "dict"
-    :list "list"
-    :any "object"))
-
-
-(defun python-instance-check-type (field-type)
-  (let ((*python-types* *python-instance-check-types*))
-    (python-type field-type)))
-
 (defun python-argspec-default (field-type default)
   "Translate DEFAULT values for immutable objects of a given
 FIELD-TYPE to python."
@@ -82,14 +67,6 @@ FIELD-TYPE to python."
     (otherwise
      "None")))
 
-(defun python-type (field-type)
-  "Always return a basic python type not List[...] or Dict[...] for
-instance checks."
-  (python-typing-type
-   (if (listp field-type)
-       (car field-type)
-       field-type)))
-
 (defun python-typing-type (field-type)
   "Return the python typing-module compliant field type"
   (etypecase field-type
@@ -113,7 +90,7 @@ instance checks."
              (python-typing-type (cadddr field-type))))))
 
 (defun python-maybe-optional-typing-type (field-type required)
-  "Rerturn the python type string for FIELD-TYPE while
+  "Return the python type string for FIELD-TYPE while
 accounting for whether the field is REQUIRED.
 "
   (let ((b (python-typing-type field-type)))
@@ -159,10 +136,10 @@ from rpcq._base import Message
 from dataclasses import dataclass, field, InitVar
 from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
     (format stream "~{from ~a import *~%~}~%" parent-modules)
-    
+
     (dolist (message-spec *messages*)
       (destructuring-bind (msg-name parent-name field-specs documentation) message-spec
-        
+
         ;; print the class header
         (python-out `(("@dataclass(eq=False, repr=False)")
                       ("class ~a(~a):"                     ,(symbol-name msg-name)
@@ -172,14 +149,14 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                       ("    \"\"\"")
                       ("    ~a"                            ,documentation)
                       ("    \"\"\"")))
-        
+
         (let ((deprecated-fields nil))
-          
+
           ;; python dataclasses require their fields to be written in the order
           ;; * required slots
           ;; * optional slots
           ;; * deprecated slots
-          
+
           (labels ((requiredp (r)
                      (and (not (member ':default (rest r)))
                           (getf (rest r) ':required)))
@@ -193,7 +170,7 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                                       (or (and (requiredp r) (optionalp s))
                                           (and (requiredp r) (deprecatedp s))
                                           (and (optionalp r) (deprecatedp s)))))))
-          
+
           (dolist (field-spec field-specs)
             (let* ((slot-name (car field-spec))
                    (field-settings (cdr field-spec))
@@ -205,12 +182,12 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                    (deprecated (getf field-settings ':deprecated))
                    (deprecates (getf field-settings ':deprecates))
                    (deprecated-by (getf field-settings ':deprecated-by)))
-              
+
               ;; optional fields automatically acquire a NIL default
               (unless (or required defaultp)
                 (setf default nil)
                 (setf defaultp t))
-              
+
               ;; print the slot descriptor
               (cond
                 ;; recipe for a deprecated slot
@@ -239,7 +216,7 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                  (python-out `(("    ~a: ~a"           ,(symbol-name slot-name)
                                                        ,(python-maybe-optional-typing-type type required))
                                ("    \"\"\"~a\"\"\""   ,documentation)))))))
-          
+
           ;; deprecated fields need special care.
           (when deprecated-fields
             ;; (1) add fake getters / setters
@@ -258,7 +235,7 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                                 ("        warn('~a is deprecated, use ~a instead')" ,(symbol-name old)
                                                                                     ,(symbol-name new))
                                 ("        self.~a = value"                          ,(symbol-name new)))))))
-            
+
             ;; (2) add extra fields to output
             (python-out `(("    def _extend_by_deprecated_fields(self, d):")
                           ("        super()._extend_by_deprecated_fields(d)")))
@@ -268,7 +245,7 @@ from typing import Any, List, Dict, Optional, Union, Tuple~%~%")
                 (when new
                   (python-out `(("        d.~a = d.~a" ,(symbol-name old)
                                                        ,(symbol-name new)))))))
-            
+
             ;; (3) tolerate extra fields on input
             (format stream
                     "    def __post_init__(self, ~{~a~^, ~}):~%"

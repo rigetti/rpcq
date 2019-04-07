@@ -38,5 +38,4 @@
            #:rpc-error-request-id
            #:rpc-protocol-error
            #:rpc-protocol-error-id
-           #:rpc-protocol-error-object
-           ))
+           #:rpc-protocol-error-object))
