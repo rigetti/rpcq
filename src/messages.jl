@@ -212,10 +212,10 @@ Base.@kwdef struct RewriteArithmeticResponse
     quil::String
 
     "The declared memory descriptors in the Quil of the related request."
-    original_memory_descriptors::Dict{String, ParameterSpec} = {}
+    original_memory_descriptors::Dict{String, ParameterSpec} = Dict()
 
     "A mapping from memory references to the original gate arithmetic."
-    recalculation_table::Dict{ParameterAref, String} = {}
+    recalculation_table::Dict{ParameterAref, String} = Dict()
 end
 
 """
@@ -237,7 +237,7 @@ Base.@kwdef struct BinaryExecutableResponse
     program::String
 
     "Internal field for constructing patch tables."
-    memory_descriptors::Dict{String, ParameterSpec} = {}
+    memory_descriptors::Dict{String, ParameterSpec} = Dict()
 
     "Internal field for reshaping returned buffers."
     ro_sources::Array{Any} = []

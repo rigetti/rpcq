@@ -69,7 +69,7 @@
           (:integer (format nil "~D" default))
           (:float (format nil "~E" default)))))
     ((cons (eql :list)) "[]")
-    ((cons (eql :map)) "{}")
+    ((cons (eql :map)) "Dict()")
     (t (if (null default) "nothing"))))
 
 (defun julia-field (field-spec)
