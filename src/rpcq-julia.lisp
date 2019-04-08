@@ -41,7 +41,7 @@
     (symbol
      (format nil "~A" field-type))
     ((cons (eql :list))
-     (format nil "Array{~A}" (julia-type (rest field-type))))
+     (format nil "Array{~A}" (julia-type (second field-type))))
     ((cons (eql :map))
      (assert (string= (symbol-name (third field-type)) "->")
              (field-type)
@@ -60,14 +60,17 @@
 (defun julia-default (field-type default)
   (etypecase field-type
     (keyword
-      (case field-type
-        (:string (format nil "~S" default))
-        (:bytes (format nil "b~S" (to-string default)))
-        (:bool (if default "true" "false"))
-        (:integer (format nil "~D" default))
-        (:float (format nil "~E" default))))
+      (if (and (null default) (not (eql field-type :bool)))
+        "nothing"
+        (case field-type
+          (:string (format nil "~S" default))
+          (:bytes (format nil "b~S" (to-string default)))
+          (:bool (if default "true" "false"))
+          (:integer (format nil "~D" default))
+          (:float (format nil "~E" default)))))
     ((cons (eql :list)) "[]")
-    ((cons (eql :map)) "{}")))
+    ((cons (eql :map)) "{}")
+    (t (if (null default) "nothing"))))
 
 (defun julia-field (field-spec)
   (let* ((slot-name (first field-spec))
@@ -93,6 +96,14 @@
 ~A
 \"\"\"
 Base.@kwdef struct ~A
-~{    ~{~A
-~^    ~}~^
-~}end" documentation msg-name (mapcar #'julia-field field-specs))))
+~{    ~{~A~^
+    ~}~^
+
+~}
+end" documentation msg-name (mapcar #'julia-field field-specs))))
+
+(defun julia-messages ()
+  (with-open-file (f "messages.jl"
+                   :direction ':output
+                   :if-exists ':supersede)
+    (format f "~{~A~^~%~%~}" (mapcar #'julia-struct *messages*))))
