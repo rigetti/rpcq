@@ -206,13 +206,13 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                              (setf result 
                                    (if timeout
                                        (bt:with-timeout (timeout)
-                                         (apply f (append args-as-list kwargs-as-plist)))
-                                       (apply f (append args-as-list kwargs-as-plist))))
+                                                        (apply f (concatenate 'list args-as-list kwargs-as-plist)))
+                                       (apply f (concatenate 'list args-as-list kwargs-as-plist))))
                              
                              (setf reply (make-instance '|RPCReply|
                                                         :|id| (|RPCRequest-id| request)
                                                         :|result| result
-                                                        :|warnings| (reverse warnings)))))
+                                                        :|warnings| (coerce (reverse warnings) 'vector)))))
                          (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request)))
                      
                      ;; this is where errors go where we can reply to the client
@@ -225,7 +225,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (format nil "Method named \"~a\" is unknown."
                                                                    (|RPCRequest-method| request))
-                                                  :|warnings| (reverse warnings))))
+                                                  :|warnings| (coerce (reverse warnings) 'vector))))
                      (bt:timeout (c)
                        (declare (ignore c))
                        (log-completion-message :err "Request ~a error: timed out"
@@ -233,7 +233,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
-                                                  :|warnings| (reverse warnings))))
+                                                  :|warnings| (coerce (reverse warnings) 'vector))))
                      (error (c)
                        (log-completion-message :err
                                                "Request ~a error: Unhandled error in host program:~%~a"
@@ -242,10 +242,14 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (princ-to-string c)
-                                                  :|warnings| (reverse warnings)))))
+                                                  :|warnings| (coerce (reverse warnings) 'vector)))))
                    
                    ;; send the client response, whether success or failure
-                   (%push-raw-request receiver identity empty-frame (serialize reply))))))
+                   (handler-case
+                       (%push-raw-request receiver identity empty-frame (serialize reply))
+                     (simple-error (c)
+                       (cl-syslog:format-log logger ':err
+                                             "Threw generic error after RPC call, during reply encoding:~%~a" c)))))))
         
          ;; this is where errors go where we can't even reply to the client
          (simple-error (c)

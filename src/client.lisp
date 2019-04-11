@@ -122,10 +122,10 @@
                (|RPCError|
                 (cond
                   ((string= uuid (|RPCError-id| unpacked-reply))
-                   (dolist (rpc-warning (|RPCError-warnings| unpacked-reply))
-                     (warn "Warning during RPC call: ~a: ~a"
-                           (|RPCWarning-kind| rpc-warning)
-                           (|RPCWarning-body| rpc-warning)))
+                   (loop :for rpc-warning :across (|RPCError-warnings| unpacked-reply)
+                         :do (warn "Warning during RPC call: ~a: ~a"
+                                   (|RPCWarning-kind| rpc-warning)
+                                   (|RPCWarning-body| rpc-warning)))
                    (error 'rpc-error
                           :string (|RPCError-error| unpacked-reply)
                           :id (|RPCError-id| unpacked-reply)))
@@ -136,10 +136,10 @@
                (|RPCReply|
                 (cond
                   ((string= uuid (|RPCReply-id| unpacked-reply))
-                   (dolist (rpc-warning (|RPCReply-warnings| unpacked-reply))
-                     (warn "Warning during RPC call: ~a: ~a"
-                           (|RPCWarning-kind| rpc-warning)
-                           (|RPCWarning-body| rpc-warning)))
+                   (loop :for rpc-warning :across (|RPCReply-warnings| unpacked-reply)
+                         :do (warn "Warning during RPC call: ~a: ~a"
+                                   (|RPCWarning-kind| rpc-warning)
+                                   (|RPCWarning-body| rpc-warning)))
                    (|RPCReply-result| unpacked-reply))
                   (t
                    (warn "Discarding RPC error with ID ~a, which doesn't match ours of ~a."
