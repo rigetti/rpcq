@@ -100,9 +100,6 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defmethod %deserialize ((payload string))
   payload)
 
-(defmethod %deserialize ((payload array))
-  (%deserialize (coerce payload 'list)))
-
 (defmethod %deserialize ((payload hash-table))
   (let ((type (gethash "_type" payload)))
     (if type
