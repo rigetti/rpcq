@@ -66,7 +66,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defmethod %serialize (payload)
   payload)
 
-(defmethod %serialize ((payload array))
+(defmethod %serialize ((payload vector))
   (map 'vector #'%serialize payload))
 
 (defmethod %serialize ((payload cons))
@@ -91,7 +91,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 
 (defgeneric %deserialize-struct (type payload))
 
-(defmethod %deserialize ((payload array))
+(defmethod %deserialize ((payload vector))
   (map 'vector #'%deserialize payload))
 
 (defmethod %deserialize ((payload cons))

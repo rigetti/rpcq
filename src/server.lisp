@@ -159,12 +159,14 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
     (pzmq:connect receiver pool-address)
     (loop
        (handler-case
-           (let (request result reply start-time warnings)
+           (let ((warnings (make-array 0 :adjustable t :fill-pointer 0))
+                 request result reply start-time)
              (handler-bind
-                 ((warning (lambda (c) (push (make-instance '|RPCWarning|
-                                                            :|body| (princ-to-string c)
-                                                            :|kind| (princ-to-string (type-of c)))
-                                             warnings))))
+                 ((warning (lambda (c) (vector-push-extend
+                                        (make-instance '|RPCWarning|
+                                                       :|body| (princ-to-string c)
+                                                       :|kind| (princ-to-string (type-of c)))
+                                        warnings))))
                (macrolet ((log-completion-message (priority control &rest args)
                             `(cl-syslog:rfc-log (logger ,priority ,control ,@args)
                                (:msgid "LOG0002")
@@ -173,8 +175,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                 |requestID| (|RPCRequest-id| request)
                                 |wallTime| (format nil "~f" (/ (- (get-internal-real-time) start-time)
                                                                internal-time-units-per-second))
-                                |error| ,(if (<= (cdr (assoc priority cl-syslog::*priorities*))
-                                                 (cdr (assoc ':err cl-syslog::*priorities*)))
+                                |error| ,(if (<= (cl-syslog:get-priority priority)
+                                                 (cl-syslog:get-priority ':err))
                                              "true"
                                              "false")))))
                  (multiple-value-bind (identity empty-frame raw-request)
@@ -212,7 +214,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                              (setf reply (make-instance '|RPCReply|
                                                         :|id| (|RPCRequest-id| request)
                                                         :|result| result
-                                                        :|warnings| (coerce (reverse warnings) 'vector)))))
+                                                        :|warnings| warnings))))
                          (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request)))
                      
                      ;; this is where errors go where we can reply to the client
@@ -225,7 +227,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (format nil "Method named \"~a\" is unknown."
                                                                    (|RPCRequest-method| request))
-                                                  :|warnings| (coerce (reverse warnings) 'vector))))
+                                                  :|warnings| warnings)))
                      (bt:timeout (c)
                        (declare (ignore c))
                        (log-completion-message :err "Request ~a error: timed out"
@@ -233,7 +235,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
-                                                  :|warnings| (coerce (reverse warnings) 'vector))))
+                                                  :|warnings| warnings)))
                      (error (c)
                        (log-completion-message :err
                                                "Request ~a error: Unhandled error in host program:~%~a"
@@ -242,17 +244,17 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (princ-to-string c)
-                                                  :|warnings| (coerce (reverse warnings) 'vector)))))
+                                                  :|warnings| warnings))))
                    
                    ;; send the client response, whether success or failure
                    (handler-case
                        (%push-raw-request receiver identity empty-frame (serialize reply))
-                     (simple-error (c)
+                     (error (c)
                        (cl-syslog:format-log logger ':err
                                              "Threw generic error after RPC call, during reply encoding:~%~a" c)))))))
         
          ;; this is where errors go where we can't even reply to the client
-         (simple-error (c)
+         (error (c)
            (cl-syslog:format-log logger ':err
                                  "Threw generic error before RPC call:~%~a" c))))))
 
