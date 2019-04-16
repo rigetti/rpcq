@@ -52,7 +52,7 @@ def rpc_reply(id: Union[str, int], result: Optional[object],
 
     :param str|int id: Request ID
     :param result: Result
-    :param warning: List of warnings to attach to the message
+    :param warnings: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
     warnings = warnings or []
