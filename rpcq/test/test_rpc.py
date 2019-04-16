@@ -134,6 +134,7 @@ def test_client_warning(server, client):
         result = client.call('just_a_warning')
         assert result == 5
         assert len(warnings) > 0
+        assert str(warnings[0].message) == "UserWarning: Watch out!"
 
 
 def test_client(server, client):

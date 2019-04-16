@@ -22,8 +22,8 @@ import rpcq.messages
 
 
 def rpc_warning(warning) -> rpcq.messages.RPCWarning:
-    return rpcq.messages.RPCWarning(body=str(warning),
-                                    kind=str(type(warning)))
+    return rpcq.messages.RPCWarning(body=str(warning.message),
+                                    kind=str(warning.category.__name__))
 
 def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     """
