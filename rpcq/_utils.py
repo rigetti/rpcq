@@ -55,7 +55,7 @@ def rpc_reply(id: Union[str, int], result: Optional[object],
     :param warning: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
-    warnings = warnings or list()
+    warnings = warnings or []
 
     return rpcq.messages.RPCReply(
         jsonrpc='2.0',
