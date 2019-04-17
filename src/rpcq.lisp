@@ -23,17 +23,12 @@
 ;;; that are passed around the Rigetti core stack.
 
 
-(defvar *namespace* nil)
-
-(defmacro in-namespace (namespace)
-  (setf *namespace* namespace))
-
 ;; store all messages defined thus far in their namespace
-(defvar *messages* (make-hash-table))
+(defvar *messages* (make-hash-table :test 'equal))
 
-(defun clear-messages (namespace)
+(defun clear-messages ()
   "Clear the stored message definitions."
-  (setf (gethash namespace *messages*) nil))
+  (make-hash-table :test 'equal))
 
 
 (deftype atom-type ()
@@ -252,9 +247,9 @@ LIMITATIONS:
   (assert (or (null parent-name)
               (and (typep parent-name 'cons)
                    (= 1 (length parent-name)))))
-  (assert (not (null *namespace*)) (list *namespace*) "No active namespace set, use IN-NAMESPACE")
-  (let ((messages (gethash *namespace* *messages*)))
-    (setf (gethash *namespace* *messages*) (nconc messages `((,class-name ,(first parent-name) ,field-specs ,documentation)))))
+  (let* ((namespace (pathname-name *load-truename*))
+         (messages (gethash namespace *messages*)))
+    (setf (gethash namespace *messages*) (nconc messages `((,class-name ,(first parent-name) ,field-specs ,documentation)))))
   (labels ((accessor (slot-name)
              (alexandria:symbolicate (symbol-name class-name)
                                      "-"

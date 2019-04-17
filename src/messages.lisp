@@ -17,8 +17,6 @@
 
 (in-package #:rpcq)
 
-(in-namespace :messages)
-
 (defmessage |ParameterSpec| ()
     (
      (|type|

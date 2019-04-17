@@ -17,8 +17,6 @@
 
 (in-package #:rpcq)
 
-(in-namespace :core-messages)
-
 (defmessage |Frame| ()
     (
      (|direction|
