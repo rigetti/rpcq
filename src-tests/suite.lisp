@@ -35,8 +35,6 @@
 
 
 (deftest test-defmessage ()
-  (rpcq::in-namespace :test-namespace)
-
   (rpcq::defmessage my-msg ()
       ((required-int
         :type :integer
@@ -66,7 +64,7 @@
     (is (= (my-msg-required-int m)) 5)
     (is (= (hash-table-count (my-msg-optional-map m)) 1))
     (is (string= (gethash "yo" (my-msg-optional-map m)) "working"))
-    (is (length (gethash :test-namespace rpcq::*messages*)) 1)
+    (is (length (gethash "test-namespace" rpcq::*messages*)) 1)
     (is (typep (my-msg-flt m) 'double-float))
     (is (string= (my-msg-str m) "a string"))))
 

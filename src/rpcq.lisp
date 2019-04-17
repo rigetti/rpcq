@@ -23,6 +23,12 @@
 ;;; that are passed around the Rigetti core stack.
 
 
+;; use the name of the file to scope the messages
+(defun current-namespace ()
+  (if (null *load-truename*)
+    "test-namespace"
+    (pathname-name *load-truename*)))
+
 ;; store all messages defined thus far in their namespace
 (defvar *messages* (make-hash-table :test 'equal))
 
@@ -247,7 +253,7 @@ LIMITATIONS:
   (assert (or (null parent-name)
               (and (typep parent-name 'cons)
                    (= 1 (length parent-name)))))
-  (let* ((namespace (pathname-name *load-truename*))
+  (let* ((namespace (current-namespace))
          (messages (gethash namespace *messages*)))
     (setf (gethash namespace *messages*) (nconc messages `((,class-name ,(first parent-name) ,field-specs ,documentation)))))
   (labels ((accessor (slot-name)
