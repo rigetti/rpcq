@@ -24,10 +24,21 @@
 
 
 ;; use the name of the file to scope the messages
-(defun current-namespace ()
-  (if (null *load-truename*)
-    "test-namespace"
-    (pathname-name *load-truename*)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; use the name of the file to scope the messages
+  (defun current-namespace ()
+    (cond
+      ((not (null *load-truename*))
+       (pathname-name *load-truename*))
+      ((not (null *compile-file-truename*))
+       (pathname-name *compile-file-truename*))
+      ((boundp '*mocked-namespace*)
+       (check-type *mocked-namespace* string)
+       *mocked-namespace*)
+      (t
+       (cerror "Just use the \"messages\" namespace."
+               "Couldn't determine a valid namespace.")
+       "messages"))))
 
 ;; store all messages defined thus far in their namespace
 (defvar *messages* (make-hash-table :test 'equal))
