@@ -17,6 +17,7 @@
 
 (in-package #:rpcq)
 
+(in-namespace :messages)
 
 (defmessage |ParameterSpec| ()
     (
@@ -30,8 +31,8 @@
       :documentation "If this is not 1, the parameter is an array of this length."
       :type :integer
       :required t
-      :default 1)
-     )
+      :default 1))
+
   :documentation "Specification of a dynamic parameter type and array-length.")
 
 (defmessage |ParameterAref| ()
@@ -44,8 +45,8 @@
      (|index|
       :documentation "The array index."
       :type :integer
-      :required t)
-     )
+      :required t))
+
   :documentation "A parametric expression.")
 
 (defmessage |PatchTarget| ()
@@ -56,10 +57,10 @@
       :required t)
 
      (|patch_offset|
-     :documentation "Memory address of the patch."
+      :documentation "Memory address of the patch."
       :type :integer
-      :required t)
-    )
+      :required t))
+
 
   :documentation "Patchable memory location descriptor.")
 
@@ -84,8 +85,8 @@
      (|id|
       :documentation "RPC request id (used to verify that request and response belong together)."
       :type :string
-      :required t)
-     )
+      :required t))
+
   :documentation "A single request object according to the JSONRPC standard.")
 
 (defmessage |RPCReply| ()
@@ -104,8 +105,8 @@
      (|id|
       :documentation "The RPC request id."
       :type :string
-      :required t)
-     )
+      :required t))
+
   :documentation "The reply for a JSONRPC request.")
 
 (defmessage |RPCError| ()
@@ -124,8 +125,8 @@
      (|id|
       :documentation "The RPC request id."
       :type :string
-      :required t)
-     )
+      :required t))
+
   :documentation "A error message for JSONRPC requests.")
 
 (defmessage |TargetDevice| ()
@@ -182,10 +183,10 @@
       :type (:list :integer)
       :required t)
 
-      (|symbols|
-       :documentation "Ordered factors of a Pauli term."
-       :type (:list :string)
-       :required t))
+     (|symbols|
+      :documentation "Ordered factors of a Pauli term."
+      :type (:list :string)
+      :required t))
 
   :documentation "Specification of a single Pauli term as a tensor product of Pauli factors.")
 
