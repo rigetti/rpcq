@@ -20,9 +20,9 @@ import asyncio
 import logging
 import traceback
 from typing import Union
-from warnings import catch_warnings
 
-from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input
+from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input, \
+                        catch_warnings
 from rpcq.messages import RPCRequest, RPCReply, RPCError
 
 _log = logging.getLogger(__name__)
