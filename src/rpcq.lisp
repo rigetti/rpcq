@@ -34,7 +34,7 @@
 
 (defun clear-messages ()
   "Clear the stored message definitions."
-  (make-hash-table :test 'equal))
+  (clrhash *messages*))
 
 
 (deftype atom-type ()
