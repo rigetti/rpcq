@@ -61,10 +61,10 @@
     :documentation "Test message")
 
   (let ((m (make-instance 'my-msg :required-int 5)))
-    (is (= (my-msg-required-int m)) 5)
+    (is (= (my-msg-required-int m) 5))
     (is (= (hash-table-count (my-msg-optional-map m)) 1))
     (is (string= (gethash "yo" (my-msg-optional-map m)) "working"))
-    (is (length (gethash "test-namespace" rpcq::*messages*)) 1)
+    (is (= (length (gethash "suite" rpcq::*messages*)) 1))
     (is (typep (my-msg-flt m) 'double-float))
     (is (string= (my-msg-str m) "a string"))))
 

@@ -7,6 +7,7 @@
   (load (make-pathname :name namespace :type "lisp" :directory '(:relative "src")))
   (with-open-file (f (make-pathname :name namespace :type "py" :directory '(:relative "rpcq"))
                      :direction ':output
-                     :if-exists ':supersede)
+                     :if-exists ':supersede
+                     :if-does-not-exist ':create)
     (rpcq::python-message-spec f (gethash namespace rpcq::*messages*))
     (format t "Wrote new ~A.py~%" namespace)))

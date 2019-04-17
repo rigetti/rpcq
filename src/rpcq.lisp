@@ -23,7 +23,6 @@
 ;;; that are passed around the Rigetti core stack.
 
 
-;; use the name of the file to scope the messages
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; use the name of the file to scope the messages
   (defun current-namespace ()
