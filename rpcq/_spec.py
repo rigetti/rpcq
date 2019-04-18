@@ -21,7 +21,8 @@ import logging
 import traceback
 from typing import Union
 
-from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input
+from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input, \
+                        catch_warnings
 from rpcq.messages import RPCRequest, RPCReply, RPCError
 
 _log = logging.getLogger(__name__)
@@ -105,28 +106,30 @@ class RPCSpec(object):
         :param RPCRequest request: JSON RPC request
         :return: JSON RPC reply
         """
-        try:
-            rpc_handler = self.get_handler(request)
-        except RPCMethodError as e:
-            return rpc_error(request.id, str(e))
+        with catch_warnings(record=True) as warnings:
+            try:
+                rpc_handler = self.get_handler(request)
+            except RPCMethodError as e:
+                return rpc_error(request.id, str(e), warnings=warnings)
 
-        try:
-            # Run RPC and get result
-            args, kwargs = get_input(request.params)
-            result = rpc_handler(*args, **kwargs)
+            try:
+                # Run RPC and get result
+                args, kwargs = get_input(request.params)
+                result = rpc_handler(*args, **kwargs)
 
-            if asyncio.iscoroutine(result):
-                result = await result
+                if asyncio.iscoroutine(result):
+                    result = await result
 
-        except Exception as e:
-            if self.serialize_exceptions:
-                _traceback = traceback.format_exc()
-                _log.error(_traceback)
-                if self.provide_tracebacks:
-                    return rpc_error(request.id, "{}\n{}".format(str(e), _traceback))
+            except Exception as e:
+                if self.serialize_exceptions:
+                    _traceback = traceback.format_exc()
+                    _log.error(_traceback)
+                    if self.provide_tracebacks:
+                        return rpc_error(request.id, "{}\n{}".format(str(e), _traceback),
+                                         warnings=warnings)
+                    else:
+                        return rpc_error(request.id, str(e), warnings=warnings)
                 else:
-                    return rpc_error(request.id, str(e))
-            else:
-                raise e
+                    raise e
 
-        return rpc_reply(request.id, result)
+            return rpc_reply(request.id, result, warnings=warnings)

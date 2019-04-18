@@ -19,6 +19,7 @@ import os
 import signal
 import time
 from multiprocessing import Process
+from warnings import warn, catch_warnings
 
 import pytest
 import zmq
@@ -55,6 +56,12 @@ async def sleep(n: int):
 @mock.rpc_handler
 def raise_error():
     do_oops()
+
+
+@mock.rpc_handler
+def just_a_warning():
+    warn("Watch out!")
+    return 5
 
 
 # Some functions that will eventually raise an error.
@@ -120,6 +127,14 @@ def test_client_rpcerrorerror(server, client):
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
         assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
         assert 'ValueError: Oops.' in full_traceback
+
+
+def test_client_warning(server, client):
+    with catch_warnings(record=True) as warnings:
+        result = client.call('just_a_warning')
+        assert result == 5
+        assert len(warnings) > 0
+        assert str(warnings[0].message) == "UserWarning: Watch out!"
 
 
 def test_client(server, client):

@@ -87,6 +87,20 @@
 
   :documentation "A single request object according to the JSONRPC standard.")
 
+(defmessage |RPCWarning| ()
+    (
+     (|body|
+      :documentation "The warning string."
+      :type :string
+      :required t)
+
+     (|kind|
+      :documentation "The type of the warning raised."
+      :type :string
+      :required nil)
+    )
+  :documentation "An individual warning emitted in the course of RPC processing.")
+
 (defmessage |RPCReply| ()
     (
      (|jsonrpc|
@@ -103,8 +117,14 @@
      (|id|
       :documentation "The RPC request id."
       :type :string
-      :required t))
 
+      :required t)
+
+     (|warnings|
+      :documentation "A list of warnings that occurred during request processing."
+      :type (:list |RPCWarning|)
+      :required t
+      :default nil))
   :documentation "The reply for a JSONRPC request.")
 
 (defmessage |RPCError| ()
@@ -123,8 +143,13 @@
      (|id|
       :documentation "The RPC request id."
       :type :string
-      :required t))
+      :required t)
 
+     (|warnings|
+      :documentation "A list of warnings that occurred during request processing."
+      :type (:list |RPCWarning|)
+      :required t
+      :default nil))
   :documentation "A error message for JSONRPC requests.")
 
 (defmessage |TargetDevice| ()

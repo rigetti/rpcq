@@ -69,6 +69,19 @@ class RPCRequest(Message):
 
 
 @dataclass(eq=False, repr=False)
+class RPCWarning(Message):
+    """
+    An individual warning emitted in the course of RPC processing.
+    """
+
+    body: str
+    """The warning string."""
+
+    kind: Optional[str] = None
+    """The type of the warning raised."""
+
+
+@dataclass(eq=False, repr=False)
 class RPCReply(Message):
     """
     The reply for a JSONRPC request.
@@ -82,6 +95,9 @@ class RPCReply(Message):
 
     result: Optional[Any] = None
     """The RPC result."""
+
+    warnings: List[RPCWarning] = field(default_factory=list)
+    """A list of warnings that occurred during request processing."""
 
 
 @dataclass(eq=False, repr=False)
@@ -98,6 +114,9 @@ class RPCError(Message):
 
     jsonrpc: str = "2.0"
     """The JSONRPC version."""
+
+    warnings: List[RPCWarning] = field(default_factory=list)
+    """A list of warnings that occurred during request processing."""
 
 
 @dataclass(eq=False, repr=False)

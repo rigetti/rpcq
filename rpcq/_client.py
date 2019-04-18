@@ -17,6 +17,7 @@ import asyncio
 import logging
 import time
 from typing import Dict, Union
+from warnings import warn
 
 import zmq
 import zmq.asyncio
@@ -171,6 +172,9 @@ class Client:
                 break
             else:
                 _log.debug('Discarding reply: %s', reply)
+
+        for warning in reply.warnings:
+            warn(f"{warning.kind}: {warning.body}")
 
         if isinstance(reply, RPCError):
             raise utils.RPCError(reply.error)

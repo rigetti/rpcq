@@ -16,10 +16,14 @@
 """Utils for message passing"""
 import uuid
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List, Any
 
 import rpcq.messages
 
+
+def rpc_warning(warning: warnings.WarningMessage) -> rpcq.messages.RPCWarning:
+    return rpcq.messages.RPCWarning(body=str(warning.message),
+                                    kind=str(warning.category.__name__))
 
 def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     """
@@ -41,33 +45,41 @@ def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     )
 
 
-def rpc_reply(id: Union[str, int], result: Optional[object]) -> rpcq.messages.RPCReply:
+def rpc_reply(id: Union[str, int], result: Optional[object],
+              warnings: Optional[List[Warning]] = None) -> rpcq.messages.RPCReply:
     """
     Create RPC reply
 
     :param str|int id: Request ID
     :param result: Result
+    :param warnings: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
+    warnings = warnings or []
+
     return rpcq.messages.RPCReply(
         jsonrpc='2.0',
         id=id,
-        result=result
+        result=result,
+        warnings=[rpc_warning(warning) for warning in warnings]
     )
 
 
-def rpc_error(id: Union[str, int], error_msg: str) -> rpcq.messages.RPCError:
+def rpc_error(id: Union[str, int], error_msg: str,
+              warnings: List[Any] = []) -> rpcq.messages.RPCError:
     """
     Create RPC error
 
     :param id: Request ID
     :param error_msg: Error message
+    :param warning: List of warnings to attach to the message
     :return: JSON RPC formatted dict
     """
     return rpcq.messages.RPCError(
         jsonrpc='2.0',
         id=id,
-        error=error_msg)
+        error=error_msg,
+        warnings=[rpc_warning(warning) for warning in warnings])
 
 
 def get_input(params: Union[dict, list]) -> Tuple[list, dict]:
@@ -109,3 +121,27 @@ class RPCError(RPCErrorError):
 class RPCMethodError(AttributeError):
     """JSON RPC error that is raised by JSON RPC spec for nonexistent methods"""
 
+
+class catch_warnings(warnings.catch_warnings):
+    """This variant of warnings.catch_warnings both logs *and* re-emits warnings."""
+    def __enter__(self):
+        super().__enter__()
+
+        # the super() method does most of the work.  what follows below is actually
+        # also cut out of the super() method, but the relevant line there is
+        #
+        #     self._module._showwarnmsg_impl = log.append
+        #
+        # we, on the other hand, want to both append *and* call the saved parent
+        # log-displayer, so we wrap both inside of new_logger and store that instead.
+
+        if self._record:
+            log = []
+            def new_logger(msg):
+                nonlocal log, self
+                log.append(msg)
+                self._showwarnmsg_impl(msg)
+            self._module._showwarnmsg_impl = new_logger
+            return log
+        else:
+            return None

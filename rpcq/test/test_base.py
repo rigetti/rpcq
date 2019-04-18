@@ -32,13 +32,15 @@ def test_messages():
     assert m.error == e
     assert m.id == i
     assert m.jsonrpc == "2.0"
+    assert len(m.warnings) == 0
 
     assert m['error'] == e
     assert m.get('error', 1) == e
 
     assert m.asdict() == {"error": e,
-                        "id": i,
-                        "jsonrpc": "2.0"}
+                          "id": i,
+                          "jsonrpc": "2.0",
+                          "warnings": []}
 
     with pytest.raises(TypeError):
         RPCError(bad_field=1)
