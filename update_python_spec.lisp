@@ -2,10 +2,12 @@
 (load "~/.sbclrc")
 (ql:quickload :rpcq)
 (rpcq::clear-messages)
-(load "src/messages.lisp")
-(with-open-file (f "rpcq/messages.py"
-                   :direction ':output
-                   :if-exists ':supersede) 
-  (rpcq::python-message-spec f)
-  (write-line "Wrote new message spec."))
 
+(dolist (namespace '("messages" "core-messages"))
+  (load (make-pathname :name namespace :type "lisp" :directory '(:relative "src")))
+  (with-open-file (f (make-pathname :name namespace :type "py" :directory '(:relative "rpcq"))
+                     :direction ':output
+                     :if-exists ':supersede
+                     :if-does-not-exist ':create)
+    (rpcq::python-message-spec f (gethash namespace rpcq::*messages*))
+    (format t "Wrote new ~A.py~%" namespace)))

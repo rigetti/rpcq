@@ -23,12 +23,28 @@
 ;;; that are passed around the Rigetti core stack.
 
 
-;; store all messages defined thus far
-(defvar *messages* nil)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; use the name of the file to scope the messages
+  (defun current-namespace ()
+    (cond
+      ((not (null *load-truename*))
+       (pathname-name *load-truename*))
+      ((not (null *compile-file-truename*))
+       (pathname-name *compile-file-truename*))
+      ((boundp '*mocked-namespace*)
+       (check-type *mocked-namespace* string)
+       *mocked-namespace*)
+      (t
+       (cerror "Just use the \"messages\" namespace."
+               "Couldn't determine a valid namespace.")
+       "messages"))))
+
+;; store all messages defined thus far in their namespace
+(defvar *messages* (make-hash-table :test 'equal))
 
 (defun clear-messages ()
   "Clear the stored message definitions."
-  (setf *messages* nil))
+  (clrhash *messages*))
 
 
 (deftype atom-type ()
@@ -253,7 +269,9 @@ LIMITATIONS:
   (assert (or (null parent-name)
               (and (typep parent-name 'cons)
                    (= 1 (length parent-name)))))
-  (setf *messages* (nconc *messages* `((,class-name ,(first parent-name) ,field-specs ,documentation))))
+  (let* ((namespace (current-namespace))
+         (messages (gethash namespace *messages*)))
+    (setf (gethash namespace *messages*) (nconc messages `((,class-name ,(first parent-name) ,field-specs ,documentation)))))
   (labels ((accessor (slot-name)
              (alexandria:symbolicate (symbol-name class-name)
                                      "-"
@@ -270,15 +288,15 @@ LIMITATIONS:
                   (deprecated (getf field-settings ':deprecated))
                   (deprecates (getf field-settings ':deprecates))
                   (deprecated-by (getf field-settings ':deprecated-by)))
-               
+
                (assert (not (and deprecates deprecated-by))
                        ()
                        "It is currently unsupported for messages to have multiple levels of deprecation.")
-               
+
                (assert (not (and deprecated (or deprecates deprecated-by)))
                        ()
                        "It does not make sense to deprecate a field simultaneously with and without replacement.")
-               
+
                (multiple-value-bind (slot-type initform)
                    (slot-type-and-initform field-type required default)
                  `(,slot-name
@@ -293,7 +311,7 @@ LIMITATIONS:
                    :initarg ,(intern (symbol-name slot-name) :keyword)
                    ,@(when deprecated-by
                        `(:initarg ,(intern (symbol-name deprecated-by) :keyword)))
-                   
+
                    :reader ,(accessor slot-name)
                    :type ,slot-type
 
@@ -347,7 +365,7 @@ LIMITATIONS:
              ,(mapcar #'make-slot-spec field-specs)
              ,@(when documentation
                  `((:documentation ,(format-documentation-string documentation)))))
-           
+
            ;; in the event that our message has deprecated slots, we need to
            ;; warn the user if they use them during initialization.
            (defmethod shared-initialize ((instance ,class-name) slot-names
@@ -356,17 +374,17 @@ LIMITATIONS:
              (declare (ignore initargs))
              ,@(mapcan #'slot-initialization-deprecation-warnings field-specs)
              (call-next-method))
-           
+
            ;; similarly, we warn a user who tries to read from deprecated slots
            ,@(mapcan #'slot-accessor-deprecation-warnings field-specs)
-           
+
            ;; in order to serialize our message, we recurse through our class
            ;; ancestry and load up a hash table with all our slots. this splits
            ;; into two parts: initializing the hash table (done here) and the
            ;; recursion (done in %%serialize)
            (defmethod %serialize ((,obj ,class-name))
              (%%serialize ,obj (make-hash-table :test #'equal)))
-           
+
            (defmethod %%serialize ((,obj ,class-name) (hash-table hash-table))
              (with-slots ,slot-names ,obj
                ,@(loop :for slot :in slot-names
@@ -386,7 +404,7 @@ LIMITATIONS:
                (apply 'make-instance
                       ',class-name
                       ,init-args)))
-           
+
            (defmethod %%deserialize-struct ((type (eql ',class-name)) (payload hash-table))
              ,(cond
                 (parent-name
@@ -405,7 +423,7 @@ LIMITATIONS:
              (print-unreadable-object (,obj stream :type t)
                (pprint-indent :block 2)
                (%print-slots ,obj stream)))
-           
+
            (defmethod %print-slots ((,obj ,class-name) stream)
              ,@(loop :for spec :in field-specs
                      :unless (getf (cdr spec) ':deprecated-by)
@@ -414,7 +432,7 @@ LIMITATIONS:
                                          ,(symbol-name (car spec))
                                          (,(accessor (car spec)) ,obj)))
              (call-next-method))
-           
+
            nil)))))
 
 (defmethod %print-slots (obj stream)
