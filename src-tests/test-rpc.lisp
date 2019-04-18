@@ -67,3 +67,27 @@
                  (rpcq:rpc-call client "test-method" :sleep 5)))
       ;; kill the server thread
       (bt:destroy-thread server-thread))))
+
+(defun served-method ()
+  (warn "The purpose of this test is to communicate a warning.")
+  "Some other reply payload.")
+
+(deftest test-server-warnings ()
+  (let* ((server-function
+           (lambda ()
+             (let ((dt (rpcq:make-dispatch-table)))
+               (rpcq:dispatch-table-add-handler dt 'served-method)
+               (rpcq:start-server :timeout 5
+                                  :dispatch-table dt
+                                  :listen-addresses '("inproc://RPCQ-test")))))
+         (server-thread (bt:make-thread server-function)))
+    (sleep 1)
+    (unwind-protect
+         ;; hook up the client
+         (rpcq:with-rpc-client (client "inproc://RPCQ-test")
+               ;; send a communique
+               (signals simple-warning
+                 (is (string= "Some other reply payload."
+                              (rpcq:rpc-call client "served-method")))))
+      ;; kill the server thread
+      (bt:destroy-thread server-thread))))

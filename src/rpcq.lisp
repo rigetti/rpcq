@@ -66,12 +66,18 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defmethod %serialize (payload)
   payload)
 
+(defmethod %serialize ((payload vector))
+  (map 'vector #'%serialize payload))
+
 (defmethod %serialize ((payload cons))
   (cond
     ((alexandria:proper-list-p payload)
-     (loop :for elt :in payload :collect (%serialize elt)))
+     (map 'vector #'%serialize payload))
     (t
      (error "Can only serialize proper lists, not raw conses. Got ~S" payload))))
+
+(defmethod %serialize ((payload string))
+  payload)
 
 (defmethod %serialize ((payload hash-table))
   (let ((hash (make-hash-table :test #'equal)))
@@ -85,14 +91,14 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 
 (defgeneric %deserialize-struct (type payload))
 
+(defmethod %deserialize ((payload vector))
+  (map 'vector #'%deserialize payload))
+
 (defmethod %deserialize ((payload cons))
-  (loop :for elt :in payload :collect (%deserialize elt)))
+  (map 'vector #'%deserialize payload))
 
 (defmethod %deserialize ((payload string))
   payload)
-
-(defmethod %deserialize ((payload array))
-  (%deserialize (coerce payload 'list)))
 
 (defmethod %deserialize ((payload hash-table))
   (let ((type (gethash "_type" payload)))
