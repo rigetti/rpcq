@@ -13,8 +13,8 @@ from typing import Any, List, Dict, Optional, Union, Tuple
 @dataclass(eq=False, repr=False)
 class Frame(Message):
     """
-    A frame encapsulates any rotating frame
-relative to which control or readout waveforms may be defined.
+    A frame encapsulates any rotating frame ~
+      relative to which control or readout waveforms may be defined.
     """
 
     direction: str
@@ -44,37 +44,183 @@ class Resources(Message):
 
 
 @dataclass(eq=False, repr=False)
-class Waveform(Message):
+class AbstractWaveform(Message):
     """
-    A waveform envelope defined for a specific frame.
+    A waveform envelope defined for a specific frame. This abstract class is made concrete by either a `Waveform` or a templated waveform such as `GaussianWaveform` 
     """
 
     frame: str
     """The label of the associated tx-frame."""
 
+
+@dataclass(eq=False, repr=False)
+class Waveform(AbstractWaveform):
+    """
+    A waveform envelope defined by specific IQ values for a specific frame.
+    """
+
     iqs: List[float] = field(default_factory=list)
-    """The raw waveform envelope samples,
-          alternating I and Q values."""
+    """The raw waveform envelope samples, alternating I and Q values."""
 
 
 @dataclass(eq=False, repr=False)
-class FilterKernel(Message):
+class TemplateWaveform(AbstractWaveform):
     """
-    A filter kernel to produce scalar readout features
-from acquired readout waveforms.
+    A waveform envelope defined for a specific frame. A templated waveform is defined by a parameterized pulseshape rather than explicit IQ values. The message specification does not enforce that the duration is implementable on the hardware.
+    """
+
+    duration: float
+    """Length of the pulse in seconds"""
+
+    scale: float = 1.e+0
+    """Scale to apply to waveform envelope"""
+
+    phase: float = 0.0e+0
+    """Phase [units of tau=2pi] to rotate the complex waveform envelope."""
+
+    detuning: float = 0.0e+0
+    """Modulation to apply to the waveform in Hz"""
+
+
+@dataclass(eq=False, repr=False)
+class GaussianWaveform(TemplateWaveform):
+    """
+    A Gaussian shaped waveform envelope defined for a specific frame.
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: Optional[float] = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+
+@dataclass(eq=False, repr=False)
+class DragGaussianWaveform(TemplateWaveform):
+    """
+    A Gaussian shaped waveform envelope defined for a specific frame.
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: Optional[float] = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+    anh: float = -2.1e+8
+    """Anharmonicity of the qubit, f01-f12 in (Hz)"""
+
+    alpha: float = 0.0e+0
+    """Dimensionless DRAG parameter"""
+
+
+@dataclass(eq=False, repr=False)
+class HermiteGaussianWaveform(TemplateWaveform):
+    """
+    Hermite-Gaussian shaped pulse. Reference: Effects of arbitrary laser ~
+      or NMR pulse shapes on population inversion and coherence Warren S. Warren. ~
+      81, (1984); doi: 10.1063/1.447644
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: float = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+    anh: float = -2.1e+8
+    """Anharmonicity of the qubit, f01-f12 in Hz"""
+
+    alpha: float = 0.0e+0
+    """Dimensionless DRAG parameter"""
+
+    second_order_hrm_coeff: float = 9.56e-1
+    """Second order coefficient (see paper)"""
+
+
+@dataclass(eq=False, repr=False)
+class ErfSquareWaveform(TemplateWaveform):
+    """
+    Pulse with a flat top and rounded shoulders given by error functions
+    """
+
+    risetime: float = 1.e-9
+    """The width of the rise and fall sections in seconds."""
+
+    pad_left: float = 0.0e+0
+    """Lentgh of zero-amplitude padding before the pulse."""
+
+    pad_right: float = 0.0e+0
+    """Lentgh of zero-amplitude padding after the pulse."""
+
+
+@dataclass(eq=False, repr=False)
+class FlatWaveform(TemplateWaveform):
+    """
+    Flat pulse.
+    """
+
+    iq: List[float] = field(default_factory=list)
+    """Individual IQ point to hold constant"""
+
+
+@dataclass(eq=False, repr=False)
+class AbstractKernel(Message):
+    """
+    An integration kernel defined for a specific frame. This abstract class is made concrete by either a `FilterKernel` or `TemplateKernel`
     """
 
     frame: str
-    """The label of the associated rx-frame"""
+    """The label of the associated rx-frame."""
+
+
+@dataclass(eq=False, repr=False)
+class FilterKernel(AbstractKernel):
+    """
+    A filter kernel to produce scalar readout features from acquired readout waveforms.
+    """
 
     iqs: List[float] = field(default_factory=list)
-    """The raw kernel coefficients,
-          alternating real and imaginary parts."""
+    """The raw kernel coefficients, alternating real and imaginary parts."""
 
     bias: float = 0.0e+0
-    """The classification threshold. The real part ~
-          of the kernel iqs dotted with the captured waveform is compared ~
-          with this value to determine the readout bit."""
+    """The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."""
+
+
+@dataclass(eq=False, repr=False)
+class TemplateKernel(AbstractKernel):
+    """
+    An integration kernel defined for a specific frame.
+    """
+
+    duration: float
+    """Length of the boxcar kernel in seconds"""
+
+    bias: float = 0.0e+0
+    """The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."""
+
+    scale: float = 1.e+0
+    """Scale to apply to boxcar kernel"""
+
+    phase: float = 0.0e+0
+    """Phase [units of tau=2pi] to rotate the kernel by."""
+
+    detuning: float = 0.0e+0
+    """Modulation to apply to the filter kernel in Hz"""
+
+
+@dataclass(eq=False, repr=False)
+class FlatKernel(TemplateKernel):
+    """
+    An unnormalized flat or boxcar integration kernel.
+    """
+
+
+@dataclass(eq=False, repr=False)
+class BoxcarAveragerKernel(TemplateKernel):
+    """
+    A normalized flat or boxcar integration kernel.
+    """
 
 
 @dataclass(eq=False, repr=False)
@@ -146,11 +292,11 @@ class Program(Message):
   instructions and parameters) of a job.
     """
 
-    waveforms: Dict[str, Waveform] = field(default_factory=dict)
+    waveforms: Dict[str, AbstractWaveform] = field(default_factory=dict)
     """The waveforms appearing in the program by waveform ~
           label."""
 
-    filters: Dict[str, FilterKernel] = field(default_factory=dict)
+    filters: Dict[str, AbstractKernel] = field(default_factory=dict)
     """The readout filter kernels appearing in the program by ~
           feature label."""
 
@@ -289,6 +435,10 @@ class FlatPulse(Instruction):
     detuning: float = 0.0e+0
     """Detuning [Hz] with which the pulse envelope should be ~
           modulated relative to the frame frequency."""
+
+    scale: float = 1.e+0
+    """Dimensionless (re-)scaling factor which is applied to ~
+          the envelope."""
 
 
 @dataclass(eq=False, repr=False)
@@ -670,8 +820,8 @@ class USITargetSequencer(Message):
 
     sequencer_index: int
     """The sequencer index (0-7) to assign. Note that only ~
-        sequencer 0 has the ability to use the NCO or capture raw readout ~
-        streams."""
+           sequencer 0 has the ability to use the NCO or capture raw readout ~
+           streams."""
 
 
 @dataclass(eq=False, repr=False)

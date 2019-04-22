@@ -34,8 +34,8 @@
       :type :float
       :required t))
 
-  :documentation "A frame encapsulates any rotating frame
-relative to which control or readout waveforms may be defined.")
+  :documentation "A frame encapsulates any rotating frame ~
+      relative to which control or readout waveforms may be defined.")
 
 (defmessage |Resources| ()
     (
@@ -59,46 +59,226 @@ relative to which control or readout waveforms may be defined.")
 
   :documentation "The resources required by a job")
 
-(defmessage |Waveform| ()
+(defmessage |AbstractWaveform| ()
     (
      (|frame|
       :documentation "The label of the associated tx-frame."
       :type :string
-      :required t)
+      :required t))
 
+  :documentation "A waveform envelope defined for a specific frame. This abstract class is made concrete by either a `Waveform` or a templated waveform such as `GaussianWaveform` ")
+
+(defmessage |Waveform| (|AbstractWaveform|)
+    (
      (|iqs|
-      :documentation "The raw waveform envelope samples,
-          alternating I and Q values."
+      :documentation "The raw waveform envelope samples, alternating I and Q values."
       :type (:list :float)
       :required t
       :default nil))
 
-  :documentation "A waveform envelope defined for a specific frame.")
+  :documentation "A waveform envelope defined by specific IQ values for a specific frame.")
 
-(defmessage |FilterKernel| ()
+(defmessage |TemplateWaveform| (|AbstractWaveform|)
     (
-     (|frame|
-      :documentation "The label of the associated rx-frame"
-      :type :string
+     (|duration|
+      :documentation "Length of the pulse in seconds"
+      :type :float
       :required t)
 
+     (|scale|
+       :documentation "Scale to apply to waveform envelope"
+       :type :float
+       :required t
+       :default 1.0)
+
+     (|phase|
+       :documentation "Phase [units of tau=2pi] to rotate the complex waveform envelope."
+       :type :float
+       :required t
+       :default 0.0)
+
+     (|detuning|
+      :documentation "Modulation to apply to the waveform in Hz"
+      :type :float
+      :required t
+      :default 0.0))
+
+
+  :documentation "A waveform envelope defined for a specific frame. A templated waveform is defined by a parameterized pulseshape rather than explicit IQ values. The message specification does not enforce that the duration is implementable on the hardware.")
+
+(defmessage |GaussianWaveform| (|TemplateWaveform|)
+    (
+     (|fwhm|
+       :documentation "Full Width Half Max shape paramter in seconds"
+       :type :float
+       :required nil)
+
+     (|t0|
+       :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+       :type :float
+       :required nil))
+
+
+ :documentation "A Gaussian shaped waveform envelope defined for a specific frame.")
+
+(defmessage |DragGaussianWaveform| (|TemplateWaveform|)
+   (
+    (|fwhm|
+      :documentation "Full Width Half Max shape paramter in seconds"
+      :type :float
+      :required nil)
+
+    (|t0|
+      :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+      :type :float
+      :required nil)
+
+    (|anh|
+      :documentation "Anharmonicity of the qubit, f01-f12 in (Hz)"
+      :type :float
+      :required t
+      :default -210e6)
+
+    (|alpha|
+      :documentation "Dimensionless DRAG parameter"
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "A Gaussian shaped waveform envelope defined for a specific frame.")
+
+(defmessage |HermiteGaussianWaveform| (|TemplateWaveform|)
+  (
+   (|fwhm|
+    :documentation "Full Width Half Max shape paramter in seconds"
+    :type :float
+    :required nil)
+
+   (|t0|
+    :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+    :type :float
+    :required t
+    :default nil)
+
+   (|anh|
+    :documentation "Anharmonicity of the qubit, f01-f12 in Hz"
+    :type :float
+    :required t
+    :default -210e6)
+
+   (|alpha|
+    :documentation "Dimensionless DRAG parameter"
+    :type :float
+    :required t
+    :default 0.0)
+
+   (|second_order_hrm_coeff|
+    :documentation "Second order coefficient (see paper)"
+    :type :float
+    :required t
+    :default 0.956))
+
+  :documentation "Hermite-Gaussian shaped pulse. Reference: Effects of arbitrary laser ~
+      or NMR pulse shapes on population inversion and coherence Warren S. Warren. ~
+      81, (1984); doi: 10.1063/1.447644")
+
+(defmessage |ErfSquareWaveform| (|TemplateWaveform|)
+    (
+     (|risetime|
+       :documentation "The width of the rise and fall sections in seconds."
+       :type :float
+       :required t
+       :default 1e-9)
+
+     (|pad_left|
+      :documentation "Lentgh of zero-amplitude padding before the pulse."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|pad_right|
+      :documentation "Lentgh of zero-amplitude padding after the pulse."
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "Pulse with a flat top and rounded shoulders given by error functions")
+
+(defmessage |FlatWaveform| (|TemplateWaveform|)
+    (
+     (|iq|
+      :documentation "Individual IQ point to hold constant"
+      :type (:list :float)
+      :required t
+      :default nil))
+
+  :documentation "Flat pulse.")
+
+(defmessage |AbstractKernel| ()
+    (
+     (|frame|
+      :documentation "The label of the associated rx-frame."
+      :type :string
+      :required t))
+
+  :documentation "An integration kernel defined for a specific frame. This abstract class is made concrete by either a `FilterKernel` or `TemplateKernel`")
+
+
+(defmessage |FilterKernel| (|AbstractKernel|)
+    (
      (|iqs|
-      :documentation "The raw kernel coefficients,
-          alternating real and imaginary parts."
+      :documentation "The raw kernel coefficients, alternating real and imaginary parts."
       :type (:list :float)
       :required t
       :default nil)
 
      (|bias|
-      :documentation "The classification threshold. The real part ~
-          of the kernel iqs dotted with the captured waveform is compared ~
-          with this value to determine the readout bit."
+      :documentation "The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."
       :type :float
       :required t
       :default 0.0))
 
-  :documentation "A filter kernel to produce scalar readout features
-from acquired readout waveforms.")
+  :documentation "A filter kernel to produce scalar readout features from acquired readout waveforms.")
+
+(defmessage |TemplateKernel| (|AbstractKernel|)
+    (
+     (|duration|
+      :documentation "Length of the boxcar kernel in seconds"
+      :type :float
+      :required t)
+
+     (|bias|
+      :documentation "The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|scale|
+      :documentation "Scale to apply to boxcar kernel"
+      :type :float
+      :required t
+      :default 1.0)
+
+     (|phase|
+      :documentation "Phase [units of tau=2pi] to rotate the kernel by."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|detuning|
+      :documentation "Modulation to apply to the filter kernel in Hz"
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "An integration kernel defined for a specific frame.")
+
+(defmessage |FlatKernel| (|TemplateKernel|) ()
+  :documentation "An unnormalized flat or boxcar integration kernel.")
+
+(defmessage |BoxcarAveragerKernel| (|TemplateKernel|) ()
+  :documentation "A normalized flat or boxcar integration kernel.")
+
 
 (defmessage |FilterNode| ()
     (
@@ -186,14 +366,14 @@ from acquired readout waveforms.")
      (|waveforms|
       :documentation "The waveforms appearing in the program by waveform ~
           label."
-      :type (:map :string -> |Waveform|)
+      :type (:map :string -> |AbstractWaveform|)
       :required t
       :default nil)
 
      (|filters|
       :documentation "The readout filter kernels appearing in the program by ~
           feature label."
-      :type (:map :string -> |FilterKernel|)
+      :type (:map :string -> |AbstractKernel|)
       :required t
       :default nil)
 
@@ -364,7 +544,14 @@ from acquired readout waveforms.")
           modulated relative to the frame frequency."
       :type :float
       :required t
-      :default 0.0))
+      :default 0.0)
+
+     (|scale|
+      :documentation "Dimensionless (re-)scaling factor which is applied to ~
+          the envelope."
+      :type :float
+      :required t
+      :default 1.0))
 
   :documentation "Instruction to play a pulse with a constant amplitude ~
       (except for phase modulation) at a specific time on a specific frame.")
@@ -843,11 +1030,10 @@ from acquired readout waveforms.")
 
      (|sequencer_index|
       :documentation "The sequencer index (0-7) to assign. Note that only ~
-        sequencer 0 has the ability to use the NCO or capture raw readout ~
-        streams."
+           sequencer 0 has the ability to use the NCO or capture raw readout ~
+           streams."
       :type :integer
       :required t))
-
   :documentation "Configuration for a single USITarget Sequencer.")
 
 (defmessage |CWFrequencySweep| ()
@@ -975,7 +1161,6 @@ from acquired readout waveforms.")
           particular execution target."
       :type |TimeBomb|
       :required nil))
-
 
   :documentation "Job which is sent directly to the executor")
 
