@@ -162,7 +162,8 @@ Authors
 Developed at [Rigetti Computing](https://github.com/rigetticomputing) by
 [Nikolas Tezak](https://github.com/ntezak),
 [Steven Heidel](https://github.com/stevenheidel),
-[Peter Karalekas](https://github.com/karalekas),
 [Eric Peterson](https://github.com/ecp-rigetti),
+[Colm Ryan](https://github.com/caryan),
+[Peter Karalekas](https://github.com/karalekas),
 [Guen Prawiroatmodjo](https://github.com/guenp), and
 [Robert Smith](https://github.com/tarballs-are-good).
