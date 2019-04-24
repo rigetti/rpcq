@@ -34,8 +34,8 @@
       :type :float
       :required t))
 
-  :documentation "A frame encapsulates any rotating frame
-relative to which control or readout waveforms may be defined.")
+  :documentation "A frame encapsulates any rotating frame \
+      relative to which control or readout waveforms may be defined.")
 
 (defmessage |Resources| ()
     (
@@ -59,51 +59,231 @@ relative to which control or readout waveforms may be defined.")
 
   :documentation "The resources required by a job")
 
-(defmessage |Waveform| ()
+(defmessage |AbstractWaveform| ()
     (
      (|frame|
       :documentation "The label of the associated tx-frame."
       :type :string
-      :required t)
+      :required t))
 
+  :documentation "A waveform envelope defined for a specific frame. This abstract class is made concrete by either a `Waveform` or a templated waveform such as `GaussianWaveform` ")
+
+(defmessage |Waveform| (|AbstractWaveform|)
+    (
      (|iqs|
-      :documentation "The raw waveform envelope samples,
-          alternating I and Q values."
+      :documentation "The raw waveform envelope samples, alternating I and Q values."
       :type (:list :float)
       :required t
       :default nil))
 
-  :documentation "A waveform envelope defined for a specific frame.")
+  :documentation "A waveform envelope defined by specific IQ values for a specific frame.")
 
-(defmessage |FilterKernel| ()
+(defmessage |TemplateWaveform| (|AbstractWaveform|)
     (
-     (|frame|
-      :documentation "The label of the associated rx-frame"
-      :type :string
+     (|duration|
+      :documentation "Length of the pulse in seconds"
+      :type :float
       :required t)
 
+     (|scale|
+       :documentation "Scale to apply to waveform envelope"
+       :type :float
+       :required t
+       :default 1.0)
+
+     (|phase|
+       :documentation "Phase [units of tau=2pi] to rotate the complex waveform envelope."
+       :type :float
+       :required t
+       :default 0.0)
+
+     (|detuning|
+      :documentation "Modulation to apply to the waveform in Hz"
+      :type :float
+      :required t
+      :default 0.0))
+
+
+  :documentation "A waveform envelope defined for a specific frame. A templated waveform is defined by a parameterized pulseshape rather than explicit IQ values. The message specification does not enforce that the duration is implementable on the hardware.")
+
+(defmessage |GaussianWaveform| (|TemplateWaveform|)
+    (
+     (|fwhm|
+       :documentation "Full Width Half Max shape paramter in seconds"
+       :type :float
+       :required nil)
+
+     (|t0|
+       :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+       :type :float
+       :required nil))
+
+
+ :documentation "A Gaussian shaped waveform envelope defined for a specific frame.")
+
+(defmessage |DragGaussianWaveform| (|TemplateWaveform|)
+   (
+    (|fwhm|
+      :documentation "Full Width Half Max shape paramter in seconds"
+      :type :float
+      :required nil)
+
+    (|t0|
+      :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+      :type :float
+      :required nil)
+
+    (|anh|
+      :documentation "Anharmonicity of the qubit, f01-f12 in (Hz)"
+      :type :float
+      :required t
+      :default -210e6)
+
+    (|alpha|
+      :documentation "Dimensionless DRAG parameter"
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "A DRAG Gaussian shaped waveform envelope defined for a specific frame.")
+
+(defmessage |HermiteGaussianWaveform| (|TemplateWaveform|)
+  (
+   (|fwhm|
+    :documentation "Full Width Half Max shape paramter in seconds"
+    :type :float
+    :required nil)
+
+   (|t0|
+    :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
+    :type :float
+    :required t
+    :default nil)
+
+   (|anh|
+    :documentation "Anharmonicity of the qubit, f01-f12 in Hz"
+    :type :float
+    :required t
+    :default -210e6)
+
+   (|alpha|
+    :documentation "Dimensionless DRAG parameter"
+    :type :float
+    :required t
+    :default 0.0)
+
+   (|second_order_hrm_coeff|
+    :documentation "Second order coefficient (see paper)"
+    :type :float
+    :required t
+    :default 0.956))
+
+  :documentation "Hermite-Gaussian shaped pulse. Reference: Effects of arbitrary laser \
+      or NMR pulse shapes on population inversion and coherence Warren S. Warren. \
+      81, (1984); doi: 10.1063/1.447644")
+
+(defmessage |ErfSquareWaveform| (|TemplateWaveform|)
+    (
+     (|risetime|
+       :documentation "The width of the rise and fall sections in seconds."
+       :type :float
+       :required t
+       :default 1e-9)
+
+     (|pad_left|
+      :documentation "Length of zero-amplitude padding before the pulse in seconds."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|pad_right|
+      :documentation "Length of zero-amplitude padding after the pulse in seconds."
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "Pulse with a flat top and rounded shoulders given by error functions")
+
+(defmessage |FlatWaveform| (|TemplateWaveform|)
+    (
+     (|iq|
+      :documentation "Individual IQ point to hold constant"
+      :type (:list :float)
+      :required t
+      :default nil))
+
+  :documentation "Flat pulse.")
+
+(defmessage |AbstractKernel| ()
+    (
+     (|frame|
+      :documentation "The label of the associated rx-frame."
+      :type :string
+      :required t))
+
+  :documentation "An integration kernel defined for a specific frame. This abstract class is made concrete by either a `FilterKernel` or `TemplateKernel`")
+
+
+(defmessage |FilterKernel| (|AbstractKernel|)
+    (
      (|iqs|
-      :documentation "The raw kernel coefficients,
-          alternating real and imaginary parts."
+      :documentation "The raw kernel coefficients, alternating real and imaginary parts."
       :type (:list :float)
       :required t
       :default nil)
 
      (|bias|
-      :documentation "The classification threshold. The real part ~
-          of the kernel iqs dotted with the captured waveform is compared ~
-          with this value to determine the readout bit."
+      :documentation "The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."
       :type :float
       :required t
       :default 0.0))
 
-  :documentation "A filter kernel to produce scalar readout features
-from acquired readout waveforms.")
+  :documentation "A filter kernel to produce scalar readout features from acquired readout waveforms.")
+
+(defmessage |TemplateKernel| (|AbstractKernel|)
+    (
+     (|duration|
+      :documentation "Length of the boxcar kernel in seconds"
+      :type :float
+      :required t)
+
+     (|bias|
+      :documentation "The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|scale|
+      :documentation "Scale to apply to boxcar kernel"
+      :type :float
+      :required t
+      :default 1.0)
+
+     (|phase|
+      :documentation "Phase [units of tau=2pi] to rotate the kernel by."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|detuning|
+      :documentation "Modulation to apply to the filter kernel in Hz"
+      :type :float
+      :required t
+      :default 0.0))
+
+  :documentation "An integration kernel defined for a specific frame.")
+
+(defmessage |FlatKernel| (|TemplateKernel|) ()
+  :documentation "An unnormalized flat or boxcar integration kernel.")
+
+(defmessage |BoxcarAveragerKernel| (|TemplateKernel|) ()
+  :documentation "A normalized flat or boxcar integration kernel.")
+
 
 (defmessage |FilterNode| ()
     (
      (|module|
-      :documentation "Absolute python module import path in which the filter ~
+      :documentation "Absolute python module import path in which the filter \
           class is defined."
       :type :string
       :required t)
@@ -125,7 +305,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|publish|
-      :documentation "If True, return the output of this node with the job ~
+      :documentation "If True, return the output of this node with the job \
           results (and publish a stream for it)."
       :type :bool
       :required t))
@@ -160,7 +340,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|stream|
-      :documentation "Name of the associated (raw) output stream that ~
+      :documentation "Name of the associated (raw) output stream that \
           should be published."
       :type :string
       :required t)
@@ -177,23 +357,23 @@ from acquired readout waveforms.")
       :required t
       :default nil))
 
-  :documentation "The receiver settings generated by the low-level ~
+  :documentation "The receiver settings generated by the low-level \
       translator.")
 
 
 (defmessage |Program| ()
     (
      (|waveforms|
-      :documentation "The waveforms appearing in the program by waveform ~
+      :documentation "The waveforms appearing in the program by waveform \
           label."
-      :type (:map :string -> |Waveform|)
+      :type (:map :string -> |AbstractWaveform|)
       :required t
       :default nil)
 
      (|filters|
-      :documentation "The readout filter kernels appearing in the program by ~
+      :documentation "The readout filter kernels appearing in the program by \
           feature label."
-      :type (:map :string -> |FilterKernel|)
+      :type (:map :string -> |AbstractKernel|)
       :required t
       :default nil)
 
@@ -204,13 +384,13 @@ from acquired readout waveforms.")
       :default nil)
 
      (|parameters|
-      :documentation "A mapping of dynamic parameter names to their type ~
+      :documentation "A mapping of dynamic parameter names to their type \
           specification."
       :type (:map :string -> |ParameterSpec|)
       :required t
       :default nil))
 
-  :documentation "The dynamic aspects (waveforms, readout kernels, scheduled ~
+  :documentation "The dynamic aspects (waveforms, readout kernels, scheduled \
   instructions and parameters) of a job.")
 
 (defmessage |ScheduleIRJob| ()
@@ -232,8 +412,8 @@ from acquired readout waveforms.")
       :required t)
 
      (|operating_point|
-      :documentation "Operating points or static instrument channel settings ~
-          (mapping control_name (instrument name) -> instrument channel settings ~
+      :documentation "Operating points or static instrument channel settings \
+          (mapping control_name (instrument name) -> instrument channel settings \
           (instrument settings) dictionary)."
       :type (:map :string -> :map)
       :required t
@@ -245,7 +425,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|filter_pipeline|
-      :documentation "The filter pipeline. Mapping of node labels to ~
+      :documentation "The filter pipeline. Mapping of node labels to \
           FilterNode's."
       :type (:map :string -> |FilterNode|)
       :required t
@@ -311,27 +491,27 @@ from acquired readout waveforms.")
       :required t)
 
      (|scale|
-      :documentation "Dimensionless (re-)scaling factor which is applied to ~
+      :documentation "Dimensionless (re-)scaling factor which is applied to \
           the envelope."
       :type :float
       :required t
       :default 1.0)
 
      (|phase|
-      :documentation "Static phase angle [units of tau=2pi] by which the ~
+      :documentation "Static phase angle [units of tau=2pi] by which the \
           envelope quadratures are rotated."
       :type :float
       :required t
       :default 0.0)
 
      (|detuning|
-      :documentation "Detuning [Hz] with which the pulse envelope should be ~
+      :documentation "Detuning [Hz] with which the pulse envelope should be \
           modulated relative to the frame frequency."
       :type :float
       :required t
       :default 0.0))
 
-  :documentation "Instruction to play a pulse with some (modified) waveform ~
+  :documentation "Instruction to play a pulse with some (modified) waveform \
       envelope at a specific time on a specific frame.")
 
 (defmessage |FlatPulse| (|Instruction|)
@@ -347,26 +527,33 @@ from acquired readout waveforms.")
       :required t)
 
      (|duration|
-      :documentation "The duration of the pulse in [seconds], should be a ~
+      :documentation "The duration of the pulse in [seconds], should be a \
           multiple of the associated tx-frame's inverse sample rate."
       :type :float
       :required t)
 
      (|phase|
-      :documentation "Static phase angle [units of tau=2pi] by which the ~
+      :documentation "Static phase angle [units of tau=2pi] by which the \
           envelope quadratures are rotated."
       :type :float
       :required t
       :default 0.0)
 
      (|detuning|
-      :documentation "Detuning [Hz] with which the pulse envelope should be ~
+      :documentation "Detuning [Hz] with which the pulse envelope should be \
           modulated relative to the frame frequency."
       :type :float
       :required t
-      :default 0.0))
+      :default 0.0)
 
-  :documentation "Instruction to play a pulse with a constant amplitude ~
+     (|scale|
+      :documentation "Dimensionless (re-)scaling factor which is applied to \
+          the envelope."
+      :type :float
+      :required t
+      :default 1.0))
+
+  :documentation "Instruction to play a pulse with a constant amplitude \
       (except for phase modulation) at a specific time on a specific frame.")
 
 (defmessage |SetPhase| (|Instruction|)
@@ -377,13 +564,13 @@ from acquired readout waveforms.")
       :required t)
 
      (|phase|
-      :documentation "Phase angle [units of tau=2pi] to update the frame phase ~
+      :documentation "Phase angle [units of tau=2pi] to update the frame phase \
           to."
       :type :float
       :required t
       :default 0.0))
 
-  :documentation "Set the phase of a frame to an absolute value at a specific ~
+  :documentation "Set the phase of a frame to an absolute value at a specific \
       time.")
 
 (defmessage |ShiftPhase| (|Instruction|)
@@ -394,14 +581,14 @@ from acquired readout waveforms.")
       :required t)
 
      (|delta|
-      :documentation "Phase angle [units of tau=2pi] by which to shift the ~
-          frame phase.  Can be a numerical value, a ParameterExpression or a ~
+      :documentation "Phase angle [units of tau=2pi] by which to shift the \
+          frame phase.  Can be a numerical value, a ParameterExpression or a \
           ParameterAref."
       :type :any
       :required t
       :default 0.0))
 
-  :documentation "Shift the phase of a frame by a relative value at a ~
+  :documentation "Shift the phase of a frame by a relative value at a \
       specific time.")
 
 (defmessage |SwapPhases| (|Instruction|)
@@ -431,7 +618,7 @@ from acquired readout waveforms.")
       :required t
       :default 0.0))
 
-  :documentation "Set the frequency of a tx-frame to a specific value at a ~
+  :documentation "Set the frequency of a tx-frame to a specific value at a \
       specific time.")
 
 (defmessage |ShiftFrequency| (|Instruction|)
@@ -442,13 +629,13 @@ from acquired readout waveforms.")
       :required t)
 
      (|delta|
-      :documentation "Frequency shift (new-old) [Hz] to apply to the frame ~
+      :documentation "Frequency shift (new-old) [Hz] to apply to the frame \
           frequency."
       :type :float
       :required t
       :default 0.0))
 
-  :documentation "Shift the frequency of a tx-frame by a specific amount at a ~
+  :documentation "Shift the frequency of a tx-frame by a specific amount at a \
       specific time.")
 
 (defmessage |Capture| (|Instruction|)
@@ -464,20 +651,20 @@ from acquired readout waveforms.")
       :required t)
 
      (|filters|
-      :documentation "An ordered list of labels of filter kernels to apply to ~
+      :documentation "An ordered list of labels of filter kernels to apply to \
           the captured waveform."
       :type (:list :string)
       :required t
       :default nil)
 
      (|send_to_host|
-      :documentation "Transmit the readout bit back to Lodgepole. ~
+      :documentation "Transmit the readout bit back to Lodgepole. \
           (Unnecessary for fully calibrated active reset captures)."
       :type :bool
       :required t
       :default t))
 
-  :documentation "Specify an acquisition on an rx-frame as well as the ~
+  :documentation "Specify an acquisition on an rx-frame as well as the \
       filters to apply.")
 
 (defmessage |RackMeta| ()
@@ -514,14 +701,14 @@ from acquired readout waveforms.")
       :default nil)
 
      (|controls|
-      :documentation "A mapping of control labels to tuples (instrument ~
+      :documentation "A mapping of control labels to tuples (instrument \
           label, channel label)."
       :type (:map :string -> :list)
       :required t
       :default nil)
 
      (|controls_by_qubit|
-      :documentation "A map of qubit label to list of controls that should be ~
+      :documentation "A map of qubit label to list of controls that should be \
           considered blocked when the qubit is part of a job execution."
       :type (:map :string -> :list)
       :required t
@@ -537,7 +724,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|module|
-      :documentation "Full python import path for the module that includes ~
+      :documentation "Full python import path for the module that includes \
           the instrument driver."
       :type :string
       :required t)
@@ -559,7 +746,7 @@ from acquired readout waveforms.")
       :default nil)
 
      (|setup|
-      :documentation "Any additional information used by the instrument for ~
+      :documentation "Any additional information used by the instrument for \
           one-time-setup"
       :type (:map :string -> :any)
       :required nil))
@@ -589,7 +776,7 @@ from acquired readout waveforms.")
 (defmessage |AWGChannel| ()
     (
      (|sample_rate|
-      :documentation "The sampling rate [Hz] of the associated DAC/ADC ~
+      :documentation "The sampling rate [Hz] of the associated DAC/ADC \
           component."
       :type :float
       :required t)
@@ -632,15 +819,15 @@ from acquired readout waveforms.")
       :default 0.0)
 
      (|gain|
-      :documentation "The output gain on the DAC in [dB]. Note that this ~
-          should be in the range -45dB to 0dB and is rounded to the ~
+      :documentation "The output gain on the DAC in [dB]. Note that this \
+          should be in the range -45dB to 0dB and is rounded to the \
           nearest 3dB step."
       :type :float
       :required nil
       :default 0.0)
 
      (|channel_index|
-      :documentation "The channel index on the QFD, zero indexed from the ~
+      :documentation "The channel index on the QFD, zero indexed from the \
           lowest channel, as installed in the box."
       :type :integer
       :required t)
@@ -673,8 +860,8 @@ from acquired readout waveforms.")
       :default 2000000000.0)
 
      (|gain|
-      :documentation "The output gain on the DAC in [dB]. Note that this ~
-          should be in the range -45dB to 0dB and is rounded to the ~
+      :documentation "The output gain on the DAC in [dB]. Note that this \
+          should be in the range -45dB to 0dB and is rounded to the \
           nearest 3dB step."
       :type :float
       :required nil
@@ -703,7 +890,7 @@ from acquired readout waveforms.")
       :default 1.25e9)
 
      (|gain|
-      :documentation "The output gain on the DAC in [dB]. Note that this should be in the range ~
+      :documentation "The output gain on the DAC in [dB]. Note that this should be in the range \
        -45dB to 0dB and is rounded to the nearest 3dB step."
       :type :float
       :required nil
@@ -732,7 +919,7 @@ from acquired readout waveforms.")
       :default 0.0)
 
      (|gain|
-      :documentation "The input gain on the ADC in [dB]. Note that this should be in the range ~
+      :documentation "The input gain on the ADC in [dB]. Note that this should be in the range \
        -45dB to 0dB and is rounded to the nearest 3dB step."
       :type :float
       :required nil
@@ -812,7 +999,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|sequencer_index|
-       :documentation "The sequencer index (0-15) to assign. Note that only ~
+       :documentation "The sequencer index (0-15) to assign. Note that only \
          sequencer 0 can return raw readout measurements."
        :type :integer
        :required t))
@@ -826,7 +1013,7 @@ from acquired readout waveforms.")
       :type :string
       :required t))
 
-  :documentation "Configuration for the card which ~
+  :documentation "Configuration for the card which \
       interfaces with the USI Target on the USRP.")
 
 (defmessage |USITargetSequencer| ()
@@ -842,12 +1029,11 @@ from acquired readout waveforms.")
       :required t)
 
      (|sequencer_index|
-      :documentation "The sequencer index (0-7) to assign. Note that only ~
-        sequencer 0 has the ability to use the NCO or capture raw readout ~
-        streams."
+      :documentation "The sequencer index (0-7) to assign. Note that only \
+           sequencer 0 has the ability to use the NCO or capture raw readout \
+           streams."
       :type :integer
       :required t))
-
   :documentation "Configuration for a single USITarget Sequencer.")
 
 (defmessage |CWFrequencySweep| ()
@@ -895,7 +1081,7 @@ from acquired readout waveforms.")
       :type :float
       :required t)
      (|averaging|
-      :documentation "Sets the number of points to combine into an averaged ~
+      :documentation "Sets the number of points to combine into an averaged \
           trace"
       :type :integer
       :required t
@@ -911,19 +1097,19 @@ from acquired readout waveforms.")
 (defmessage |TimeBomb| ()
     (
      (|deadline|
-      :documentation "Deadline, specified in the format ~
+      :documentation "Deadline, specified in the format \
           '%Y-%m-%dT%H:%M:%S.000Z', after which this job becomes unexecutable."
       :type :string
       :required t)
 
      (|chip_label|
-      :documentation "Label string for the chip on which this job is meant to ~
+      :documentation "Label string for the chip on which this job is meant to \
           execute."
       :type :string
       :required t))
 
 
-  :documentation "Payload used to match a job with a particular execution ~
+  :documentation "Payload used to match a job with a particular execution \
       target.")
 
 (defmessage |MicrowaveSourceSettings| ()
@@ -950,7 +1136,7 @@ from acquired readout waveforms.")
 (defmessage |ExecutorJob| ()
     (
      (|instrument_settings|
-      :documentation "Dict mapping instrument names to arbitrary instrument ~
+      :documentation "Dict mapping instrument names to arbitrary instrument \
           settings."
       :type (:map :string -> :any)
       :required t)
@@ -971,11 +1157,10 @@ from acquired readout waveforms.")
       :required nil)
 
      (|timebomb|
-      :documentation "An optional payload used to match this job with a ~
+      :documentation "An optional payload used to match this job with a \
           particular execution target."
       :type |TimeBomb|
       :required nil))
-
 
   :documentation "Job which is sent directly to the executor")
 
@@ -987,13 +1172,13 @@ from acquired readout waveforms.")
       :required t)
 
      (|patch_table|
-      :documentation "Dictionary mapping patch names to their memory ~
+      :documentation "Dictionary mapping patch names to their memory \
           descriptors."
       :type (:map :string -> |PatchTarget|)
       :required t))
 
 
-  :documentation "Tsunami binary with patching metadata for classical ~
+  :documentation "Tsunami binary with patching metadata for classical \
       parameter modification.")
 
 (defmessage |ActiveReset| ()
@@ -1010,8 +1195,8 @@ from acquired readout waveforms.")
       :default 3)
 
      (|measurement_duration|
-      :documentation "The duration of measurement block in [seconds]. The ~
-          measurement bit is expected to have arrived on the QGS after ~
+      :documentation "The duration of measurement block in [seconds]. The \
+          measurement bit is expected to have arrived on the QGS after \
           this time relative to the overall start of the ActiveReset block."
       :type :float
       :required t)
@@ -1022,7 +1207,7 @@ from acquired readout waveforms.")
       :required t)
 
      (|measurement_instructions|
-      :documentation "The ordered sequence of scheduled measurement ~
+      :documentation "The ordered sequence of scheduled measurement \
           instructions."
       :type (:list :map)
       :required t
@@ -1030,15 +1215,15 @@ from acquired readout waveforms.")
 
 
      (|measurement_bit|
-      :documentation "The address of the readout bit to condition the ~
-          feedback on.  The bit is first accessed after measurement_duration ~
+      :documentation "The address of the readout bit to condition the \
+          feedback on.  The bit is first accessed after measurement_duration \
           has elapsed."
       :type :integer
       :required t)
 
 
      (|apply_feedback_when|
-      :documentation "Apply the feedback when the measurement_bit equals the ~
+      :documentation "Apply the feedback when the measurement_bit equals the \
           value of this flag."
       :type :bool
       :required t
@@ -1052,11 +1237,11 @@ from acquired readout waveforms.")
       :default nil))
 
 
-  :documentation "An active reset control sequence consisting of a repeated ~
-      sequence of a measurement block and a feedback block conditional on the ~
-      outcome of a specific measurement bit.  Regardless of the measurement ~
-      outcomes the total duration of the control sequence is [attempts x ~
-      (measurement_duration + feedback_duration)].  The total ~
-      measurement_duration must be chosen to allow for enough time after any ~
-      Capture commands for the measurement bit to propagate back to the gate ~
+  :documentation "An active reset control sequence consisting of a repeated \
+      sequence of a measurement block and a feedback block conditional on the \
+      outcome of a specific measurement bit.  Regardless of the measurement \
+      outcomes the total duration of the control sequence is [attempts x \
+      (measurement_duration + feedback_duration)].  The total \
+      measurement_duration must be chosen to allow for enough time after any \
+      Capture commands for the measurement bit to propagate back to the gate \
       cards that are actuating the feedback.")

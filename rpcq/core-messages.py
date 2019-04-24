@@ -13,8 +13,8 @@ from typing import Any, List, Dict, Optional, Union, Tuple
 @dataclass(eq=False, repr=False)
 class Frame(Message):
     """
-    A frame encapsulates any rotating frame
-relative to which control or readout waveforms may be defined.
+    A frame encapsulates any rotating frame 
+      relative to which control or readout waveforms may be defined.
     """
 
     direction: str
@@ -44,37 +44,183 @@ class Resources(Message):
 
 
 @dataclass(eq=False, repr=False)
-class Waveform(Message):
+class AbstractWaveform(Message):
     """
-    A waveform envelope defined for a specific frame.
+    A waveform envelope defined for a specific frame. This abstract class is made concrete by either a `Waveform` or a templated waveform such as `GaussianWaveform` 
     """
 
     frame: str
     """The label of the associated tx-frame."""
 
+
+@dataclass(eq=False, repr=False)
+class Waveform(AbstractWaveform):
+    """
+    A waveform envelope defined by specific IQ values for a specific frame.
+    """
+
     iqs: List[float] = field(default_factory=list)
-    """The raw waveform envelope samples,
-          alternating I and Q values."""
+    """The raw waveform envelope samples, alternating I and Q values."""
 
 
 @dataclass(eq=False, repr=False)
-class FilterKernel(Message):
+class TemplateWaveform(AbstractWaveform):
     """
-    A filter kernel to produce scalar readout features
-from acquired readout waveforms.
+    A waveform envelope defined for a specific frame. A templated waveform is defined by a parameterized pulseshape rather than explicit IQ values. The message specification does not enforce that the duration is implementable on the hardware.
+    """
+
+    duration: float
+    """Length of the pulse in seconds"""
+
+    scale: float = 1.e+0
+    """Scale to apply to waveform envelope"""
+
+    phase: float = 0.0e+0
+    """Phase [units of tau=2pi] to rotate the complex waveform envelope."""
+
+    detuning: float = 0.0e+0
+    """Modulation to apply to the waveform in Hz"""
+
+
+@dataclass(eq=False, repr=False)
+class GaussianWaveform(TemplateWaveform):
+    """
+    A Gaussian shaped waveform envelope defined for a specific frame.
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: Optional[float] = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+
+@dataclass(eq=False, repr=False)
+class DragGaussianWaveform(TemplateWaveform):
+    """
+    A DRAG Gaussian shaped waveform envelope defined for a specific frame.
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: Optional[float] = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+    anh: float = -2.1e+8
+    """Anharmonicity of the qubit, f01-f12 in (Hz)"""
+
+    alpha: float = 0.0e+0
+    """Dimensionless DRAG parameter"""
+
+
+@dataclass(eq=False, repr=False)
+class HermiteGaussianWaveform(TemplateWaveform):
+    """
+    Hermite-Gaussian shaped pulse. Reference: Effects of arbitrary laser 
+      or NMR pulse shapes on population inversion and coherence Warren S. Warren. 
+      81, (1984); doi: 10.1063/1.447644
+    """
+
+    fwhm: Optional[float] = None
+    """Full Width Half Max shape paramter in seconds"""
+
+    t0: float = None
+    """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
+
+    anh: float = -2.1e+8
+    """Anharmonicity of the qubit, f01-f12 in Hz"""
+
+    alpha: float = 0.0e+0
+    """Dimensionless DRAG parameter"""
+
+    second_order_hrm_coeff: float = 9.56e-1
+    """Second order coefficient (see paper)"""
+
+
+@dataclass(eq=False, repr=False)
+class ErfSquareWaveform(TemplateWaveform):
+    """
+    Pulse with a flat top and rounded shoulders given by error functions
+    """
+
+    risetime: float = 1.e-9
+    """The width of the rise and fall sections in seconds."""
+
+    pad_left: float = 0.0e+0
+    """Length of zero-amplitude padding before the pulse in seconds."""
+
+    pad_right: float = 0.0e+0
+    """Length of zero-amplitude padding after the pulse in seconds."""
+
+
+@dataclass(eq=False, repr=False)
+class FlatWaveform(TemplateWaveform):
+    """
+    Flat pulse.
+    """
+
+    iq: List[float] = field(default_factory=list)
+    """Individual IQ point to hold constant"""
+
+
+@dataclass(eq=False, repr=False)
+class AbstractKernel(Message):
+    """
+    An integration kernel defined for a specific frame. This abstract class is made concrete by either a `FilterKernel` or `TemplateKernel`
     """
 
     frame: str
-    """The label of the associated rx-frame"""
+    """The label of the associated rx-frame."""
+
+
+@dataclass(eq=False, repr=False)
+class FilterKernel(AbstractKernel):
+    """
+    A filter kernel to produce scalar readout features from acquired readout waveforms.
+    """
 
     iqs: List[float] = field(default_factory=list)
-    """The raw kernel coefficients,
-          alternating real and imaginary parts."""
+    """The raw kernel coefficients, alternating real and imaginary parts."""
 
     bias: float = 0.0e+0
-    """The classification threshold. The real part ~
-          of the kernel iqs dotted with the captured waveform is compared ~
-          with this value to determine the readout bit."""
+    """The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."""
+
+
+@dataclass(eq=False, repr=False)
+class TemplateKernel(AbstractKernel):
+    """
+    An integration kernel defined for a specific frame.
+    """
+
+    duration: float
+    """Length of the boxcar kernel in seconds"""
+
+    bias: float = 0.0e+0
+    """The kernel is offset by this real value. Can be used to ensure the decision threshold lies at 0.0."""
+
+    scale: float = 1.e+0
+    """Scale to apply to boxcar kernel"""
+
+    phase: float = 0.0e+0
+    """Phase [units of tau=2pi] to rotate the kernel by."""
+
+    detuning: float = 0.0e+0
+    """Modulation to apply to the filter kernel in Hz"""
+
+
+@dataclass(eq=False, repr=False)
+class FlatKernel(TemplateKernel):
+    """
+    An unnormalized flat or boxcar integration kernel.
+    """
+
+
+@dataclass(eq=False, repr=False)
+class BoxcarAveragerKernel(TemplateKernel):
+    """
+    A normalized flat or boxcar integration kernel.
+    """
 
 
 @dataclass(eq=False, repr=False)
@@ -84,7 +230,7 @@ class FilterNode(Message):
     """
 
     module: str
-    """Absolute python module import path in which the filter ~
+    """Absolute python module import path in which the filter 
           class is defined."""
 
     filter_type: str
@@ -94,7 +240,7 @@ class FilterNode(Message):
     """Filter node label of the input to this node."""
 
     publish: bool
-    """If True, return the output of this node with the job ~
+    """If True, return the output of this node with the job 
           results (and publish a stream for it)."""
 
     params: Dict[str, float] = field(default_factory=dict)
@@ -117,7 +263,7 @@ class DataAxis(Message):
 @dataclass(eq=False, repr=False)
 class Receiver(Message):
     """
-    The receiver settings generated by the low-level ~
+    The receiver settings generated by the low-level 
       translator.
     """
 
@@ -128,7 +274,7 @@ class Receiver(Message):
     """The instrument channel (label)"""
 
     stream: str
-    """Name of the associated (raw) output stream that ~
+    """Name of the associated (raw) output stream that 
           should be published."""
 
     publish: bool
@@ -142,23 +288,23 @@ class Receiver(Message):
 @dataclass(eq=False, repr=False)
 class Program(Message):
     """
-    The dynamic aspects (waveforms, readout kernels, scheduled ~
+    The dynamic aspects (waveforms, readout kernels, scheduled 
   instructions and parameters) of a job.
     """
 
-    waveforms: Dict[str, Waveform] = field(default_factory=dict)
-    """The waveforms appearing in the program by waveform ~
+    waveforms: Dict[str, AbstractWaveform] = field(default_factory=dict)
+    """The waveforms appearing in the program by waveform 
           label."""
 
-    filters: Dict[str, FilterKernel] = field(default_factory=dict)
-    """The readout filter kernels appearing in the program by ~
+    filters: Dict[str, AbstractKernel] = field(default_factory=dict)
+    """The readout filter kernels appearing in the program by 
           feature label."""
 
     scheduled_instructions: List[Dict] = field(default_factory=list)
     """The ordered sequence scheduled instruction objects."""
 
     parameters: Dict[str, ParameterSpec] = field(default_factory=dict)
-    """A mapping of dynamic parameter names to their type ~
+    """A mapping of dynamic parameter names to their type 
           specification."""
 
 
@@ -178,12 +324,12 @@ class ScheduleIRJob(Message):
     """The actual program to be executed."""
 
     operating_point: Dict[str, Dict] = field(default_factory=dict)
-    """Operating points or static instrument channel settings ~
-          (mapping control_name (instrument name) -> instrument channel settings ~
+    """Operating points or static instrument channel settings 
+          (mapping control_name (instrument name) -> instrument channel settings 
           (instrument settings) dictionary)."""
 
     filter_pipeline: Dict[str, FilterNode] = field(default_factory=dict)
-    """The filter pipeline. Mapping of node labels to ~
+    """The filter pipeline. Mapping of node labels to 
           FilterNode's."""
 
     job_id: InitVar[Optional[str]] = None
@@ -242,7 +388,7 @@ class DebugMessage(Instruction):
 @dataclass(eq=False, repr=False)
 class Pulse(Instruction):
     """
-    Instruction to play a pulse with some (modified) waveform ~
+    Instruction to play a pulse with some (modified) waveform 
       envelope at a specific time on a specific frame.
     """
 
@@ -253,22 +399,22 @@ class Pulse(Instruction):
     """The waveform label"""
 
     scale: float = 1.e+0
-    """Dimensionless (re-)scaling factor which is applied to ~
+    """Dimensionless (re-)scaling factor which is applied to 
           the envelope."""
 
     phase: float = 0.0e+0
-    """Static phase angle [units of tau=2pi] by which the ~
+    """Static phase angle [units of tau=2pi] by which the 
           envelope quadratures are rotated."""
 
     detuning: float = 0.0e+0
-    """Detuning [Hz] with which the pulse envelope should be ~
+    """Detuning [Hz] with which the pulse envelope should be 
           modulated relative to the frame frequency."""
 
 
 @dataclass(eq=False, repr=False)
 class FlatPulse(Instruction):
     """
-    Instruction to play a pulse with a constant amplitude ~
+    Instruction to play a pulse with a constant amplitude 
       (except for phase modulation) at a specific time on a specific frame.
     """
 
@@ -279,22 +425,26 @@ class FlatPulse(Instruction):
     """The I and Q value of the constant pulse."""
 
     duration: float
-    """The duration of the pulse in [seconds], should be a ~
+    """The duration of the pulse in [seconds], should be a 
           multiple of the associated tx-frame's inverse sample rate."""
 
     phase: float = 0.0e+0
-    """Static phase angle [units of tau=2pi] by which the ~
+    """Static phase angle [units of tau=2pi] by which the 
           envelope quadratures are rotated."""
 
     detuning: float = 0.0e+0
-    """Detuning [Hz] with which the pulse envelope should be ~
+    """Detuning [Hz] with which the pulse envelope should be 
           modulated relative to the frame frequency."""
+
+    scale: float = 1.e+0
+    """Dimensionless (re-)scaling factor which is applied to 
+          the envelope."""
 
 
 @dataclass(eq=False, repr=False)
 class SetPhase(Instruction):
     """
-    Set the phase of a frame to an absolute value at a specific ~
+    Set the phase of a frame to an absolute value at a specific 
       time.
     """
 
@@ -302,14 +452,14 @@ class SetPhase(Instruction):
     """The frame label for which to set the phase."""
 
     phase: float = 0.0e+0
-    """Phase angle [units of tau=2pi] to update the frame phase ~
+    """Phase angle [units of tau=2pi] to update the frame phase 
           to."""
 
 
 @dataclass(eq=False, repr=False)
 class ShiftPhase(Instruction):
     """
-    Shift the phase of a frame by a relative value at a ~
+    Shift the phase of a frame by a relative value at a 
       specific time.
     """
 
@@ -317,8 +467,8 @@ class ShiftPhase(Instruction):
     """The frame label for which to set the phase."""
 
     delta: Any = None
-    """Phase angle [units of tau=2pi] by which to shift the ~
-          frame phase.  Can be a numerical value, a ParameterExpression or a ~
+    """Phase angle [units of tau=2pi] by which to shift the 
+          frame phase.  Can be a numerical value, a ParameterExpression or a 
           ParameterAref."""
 
 
@@ -338,7 +488,7 @@ class SwapPhases(Instruction):
 @dataclass(eq=False, repr=False)
 class SetFrequency(Instruction):
     """
-    Set the frequency of a tx-frame to a specific value at a ~
+    Set the frequency of a tx-frame to a specific value at a 
       specific time.
     """
 
@@ -352,7 +502,7 @@ class SetFrequency(Instruction):
 @dataclass(eq=False, repr=False)
 class ShiftFrequency(Instruction):
     """
-    Shift the frequency of a tx-frame by a specific amount at a ~
+    Shift the frequency of a tx-frame by a specific amount at a 
       specific time.
     """
 
@@ -360,14 +510,14 @@ class ShiftFrequency(Instruction):
     """The frame label for which to set the frequency."""
 
     delta: float = 0.0e+0
-    """Frequency shift (new-old) [Hz] to apply to the frame ~
+    """Frequency shift (new-old) [Hz] to apply to the frame 
           frequency."""
 
 
 @dataclass(eq=False, repr=False)
 class Capture(Instruction):
     """
-    Specify an acquisition on an rx-frame as well as the ~
+    Specify an acquisition on an rx-frame as well as the 
       filters to apply.
     """
 
@@ -378,11 +528,11 @@ class Capture(Instruction):
     """The duration of the acquisition in [seconds]"""
 
     filters: List[str] = field(default_factory=list)
-    """An ordered list of labels of filter kernels to apply to ~
+    """An ordered list of labels of filter kernels to apply to 
           the captured waveform."""
 
     send_to_host: bool = True
-    """Transmit the readout bit back to Lodgepole. ~
+    """Transmit the readout bit back to Lodgepole. 
           (Unnecessary for fully calibrated active reset captures)."""
 
 
@@ -415,11 +565,11 @@ class QPU(Message):
     """A list of qubits labels."""
 
     controls: Dict[str, List] = field(default_factory=dict)
-    """A mapping of control labels to tuples (instrument ~
+    """A mapping of control labels to tuples (instrument 
           label, channel label)."""
 
     controls_by_qubit: Dict[str, List] = field(default_factory=dict)
-    """A map of qubit label to list of controls that should be ~
+    """A map of qubit label to list of controls that should be 
           considered blocked when the qubit is part of a job execution."""
 
 
@@ -433,7 +583,7 @@ class Instrument(Message):
     """The full address of a QPU."""
 
     module: str
-    """Full python import path for the module that includes ~
+    """Full python import path for the module that includes 
           the instrument driver."""
 
     instrument_type: str
@@ -446,7 +596,7 @@ class Instrument(Message):
     """Whether the instrument is virtual."""
 
     setup: Dict[str, Any] = field(default_factory=dict)
-    """Any additional information used by the instrument for ~
+    """Any additional information used by the instrument for 
           one-time-setup"""
 
 
@@ -473,7 +623,7 @@ class AWGChannel(Message):
     """
 
     sample_rate: float
-    """The sampling rate [Hz] of the associated DAC/ADC ~
+    """The sampling rate [Hz] of the associated DAC/ADC 
           component."""
 
     direction: str
@@ -496,7 +646,7 @@ class QFDChannel(Message):
     """
 
     channel_index: int
-    """The channel index on the QFD, zero indexed from the ~
+    """The channel index on the QFD, zero indexed from the 
           lowest channel, as installed in the box."""
 
     direction: Optional[str] = "tx"
@@ -506,8 +656,8 @@ class QFDChannel(Message):
     """The DAC NCO frequency [Hz]."""
 
     gain: Optional[float] = 0.0e+0
-    """The output gain on the DAC in [dB]. Note that this ~
-          should be in the range -45dB to 0dB and is rounded to the ~
+    """The output gain on the DAC in [dB]. Note that this 
+          should be in the range -45dB to 0dB and is rounded to the 
           nearest 3dB step."""
 
     delay: float = 0.0e+0
@@ -530,8 +680,8 @@ class QGSChannel(Message):
     """The DAC NCO frequency [Hz]."""
 
     gain: Optional[float] = 0.0e+0
-    """The output gain on the DAC in [dB]. Note that this ~
-          should be in the range -45dB to 0dB and is rounded to the ~
+    """The output gain on the DAC in [dB]. Note that this 
+          should be in the range -45dB to 0dB and is rounded to the 
           nearest 3dB step."""
 
     delay: float = 0.0e+0
@@ -551,7 +701,7 @@ class QRTChannel(Message):
     """The DAC NCO frequency [Hz]."""
 
     gain: Optional[float] = 0.0e+0
-    """The output gain on the DAC in [dB]. Note that this should be in the range ~
+    """The output gain on the DAC in [dB]. Note that this should be in the range 
        -45dB to 0dB and is rounded to the nearest 3dB step."""
 
     delay: float = 0.0e+0
@@ -575,7 +725,7 @@ class QRRChannel(Message):
     """The ADC NCO frequency [Hz]."""
 
     gain: Optional[float] = 0.0e+0
-    """The input gain on the ADC in [dB]. Note that this should be in the range ~
+    """The input gain on the ADC in [dB]. Note that this should be in the range 
        -45dB to 0dB and is rounded to the nearest 3dB step."""
 
     delay: float = 0.0e+0
@@ -641,14 +791,14 @@ class QRRSequencer(Message):
     """The label of the associated rx channel."""
 
     sequencer_index: int
-    """The sequencer index (0-15) to assign. Note that only ~
+    """The sequencer index (0-15) to assign. Note that only 
          sequencer 0 can return raw readout measurements."""
 
 
 @dataclass(eq=False, repr=False)
 class USICardSequencer(Message):
     """
-    Configuration for the card which ~
+    Configuration for the card which 
       interfaces with the USI Target on the USRP.
     """
 
@@ -669,9 +819,9 @@ class USITargetSequencer(Message):
     """The label of the associated initial rx channel."""
 
     sequencer_index: int
-    """The sequencer index (0-7) to assign. Note that only ~
-        sequencer 0 has the ability to use the NCO or capture raw readout ~
-        streams."""
+    """The sequencer index (0-7) to assign. Note that only 
+           sequencer 0 has the ability to use the NCO or capture raw readout 
+           streams."""
 
 
 @dataclass(eq=False, repr=False)
@@ -718,23 +868,23 @@ class VNASettings(Message):
     """Frequency sweep settings"""
 
     averaging: int = 1
-    """Sets the number of points to combine into an averaged ~
+    """Sets the number of points to combine into an averaged 
           trace"""
 
 
 @dataclass(eq=False, repr=False)
 class TimeBomb(Message):
     """
-    Payload used to match a job with a particular execution ~
+    Payload used to match a job with a particular execution 
       target.
     """
 
     deadline: str
-    """Deadline, specified in the format ~
+    """Deadline, specified in the format 
           '%Y-%m-%dT%H:%M:%S.000Z', after which this job becomes unexecutable."""
 
     chip_label: str
-    """Label string for the chip on which this job is meant to ~
+    """Label string for the chip on which this job is meant to 
           execute."""
 
 
@@ -761,7 +911,7 @@ class ExecutorJob(Message):
     """
 
     instrument_settings: Dict[str, Any]
-    """Dict mapping instrument names to arbitrary instrument ~
+    """Dict mapping instrument names to arbitrary instrument 
           settings."""
 
     filter_pipeline: Dict[str, FilterNode]
@@ -774,14 +924,14 @@ class ExecutorJob(Message):
     """The total duration of the program execution in seconds."""
 
     timebomb: Optional[TimeBomb] = None
-    """An optional payload used to match this job with a ~
+    """An optional payload used to match this job with a 
           particular execution target."""
 
 
 @dataclass(eq=False, repr=False)
 class PatchableBinary(Message):
     """
-    Tsunami binary with patching metadata for classical ~
+    Tsunami binary with patching metadata for classical 
       parameter modification.
     """
 
@@ -789,20 +939,20 @@ class PatchableBinary(Message):
     """Raw Tsunami binary object."""
 
     patch_table: Dict[str, PatchTarget]
-    """Dictionary mapping patch names to their memory ~
+    """Dictionary mapping patch names to their memory 
           descriptors."""
 
 
 @dataclass(eq=False, repr=False)
 class ActiveReset(Message):
     """
-    An active reset control sequence consisting of a repeated ~
-      sequence of a measurement block and a feedback block conditional on the ~
-      outcome of a specific measurement bit.  Regardless of the measurement ~
-      outcomes the total duration of the control sequence is [attempts x ~
-      (measurement_duration + feedback_duration)].  The total ~
-      measurement_duration must be chosen to allow for enough time after any ~
-      Capture commands for the measurement bit to propagate back to the gate ~
+    An active reset control sequence consisting of a repeated 
+      sequence of a measurement block and a feedback block conditional on the 
+      outcome of a specific measurement bit.  Regardless of the measurement 
+      outcomes the total duration of the control sequence is [attempts x 
+      (measurement_duration + feedback_duration)].  The total 
+      measurement_duration must be chosen to allow for enough time after any 
+      Capture commands for the measurement bit to propagate back to the gate 
       cards that are actuating the feedback.
     """
 
@@ -810,27 +960,27 @@ class ActiveReset(Message):
     """Time at which the ActiveReset begins in [seconds]."""
 
     measurement_duration: float
-    """The duration of measurement block in [seconds]. The ~
-          measurement bit is expected to have arrived on the QGS after ~
+    """The duration of measurement block in [seconds]. The 
+          measurement bit is expected to have arrived on the QGS after 
           this time relative to the overall start of the ActiveReset block."""
 
     feedback_duration: float
     """The duration of feedback block in [seconds]"""
 
     measurement_bit: int
-    """The address of the readout bit to condition the ~
-          feedback on.  The bit is first accessed after measurement_duration ~
+    """The address of the readout bit to condition the 
+          feedback on.  The bit is first accessed after measurement_duration 
           has elapsed."""
 
     attempts: int = 3
     """The number of times to repeat the active reset sequence."""
 
     measurement_instructions: List[Dict] = field(default_factory=list)
-    """The ordered sequence of scheduled measurement ~
+    """The ordered sequence of scheduled measurement 
           instructions."""
 
     apply_feedback_when: bool = True
-    """Apply the feedback when the measurement_bit equals the ~
+    """Apply the feedback when the measurement_bit equals the 
           value of this flag."""
 
     feedback_instructions: List[Dict] = field(default_factory=list)
