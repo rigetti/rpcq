@@ -6,6 +6,7 @@ WARNING: This file is auto-generated, do not edit by hand. See README.md.
 
 from warnings import warn
 from rpcq._base import Message
+from rpcq.messages import ParameterSpec, PatchTarget
 from dataclasses import dataclass, field, InitVar
 from typing import Any, List, Dict, Optional, Union, Tuple
 
