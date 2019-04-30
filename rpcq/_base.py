@@ -14,11 +14,17 @@
 #    limitations under the License.
 ##############################################################################
 
-import rapidjson
+import sys
 
 import msgpack
-from dataclasses import astuple, replace, fields
+import rapidjson
 from ruamel import yaml
+
+if sys.version_info < (3, 7):
+    from rpcq.external.dataclasses import astuple, replace, fields
+else:
+    from dataclasses import astuple, replace, fields
+
 
 MAX_BIN_LEN = MAX_STR_LEN = 2 ** 31 - 1  # less than 2 GB
 REPR_LIST_TRUNCATION = 10
