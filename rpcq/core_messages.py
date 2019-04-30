@@ -4,11 +4,17 @@
 WARNING: This file is auto-generated, do not edit by hand. See README.md.
 """
 
+import sys
+
 from warnings import warn
 from rpcq._base import Message
 from rpcq.messages import ParameterSpec, PatchTarget
-from dataclasses import dataclass, field, InitVar
-from typing import Any, List, Dict, Optional, Union, Tuple
+from typing import Any, List, Dict, Optional
+
+if sys.version_info < (3, 7):
+    from rpcq.external.dataclasses import dataclass, field, InitVar
+else:
+    from dataclasses import dataclass, field, InitVar
 
 
 @dataclass(eq=False, repr=False)

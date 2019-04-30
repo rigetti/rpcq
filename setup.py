@@ -14,7 +14,12 @@
 #    limitations under the License.
 ##############################################################################
 
+import sys
+
 from setuptools import setup
+
+if sys.version_info < (3, 6):
+    raise ImportError('The rpcq library requires Python 3.6 or above.')
 
 with open('VERSION.txt', 'r') as f:
     __version__ = f.read().strip()
@@ -38,12 +43,12 @@ setup(
     license='Apache-2.0',
     packages=[
         'rpcq',
+        'rpcq.external'
     ],
     url='https://github.com/rigetticomputing/rpcq.git',
     description='''The RPC framework and message specification for Rigetti QCS.''',
     long_description=long_description,
     install_requires=[
-        'dataclasses;python_version<="3.6"',
         'future',
         'msgpack>=0.6',
         'python-rapidjson',
@@ -52,7 +57,7 @@ setup(
         'typing'
     ],
     keywords='quantum rpc qcs',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
 )
 
 # restore version.py to its previous state

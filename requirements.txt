@@ -4,7 +4,6 @@ python-rapidjson
 pyzmq>=17
 ruamel.yaml
 typing
-dataclasses
 
 # testing
 numpy
