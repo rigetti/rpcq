@@ -14,6 +14,7 @@
 #    limitations under the License.
 ##############################################################################
 
+import inspect
 import sys
 
 import msgpack
@@ -146,7 +147,8 @@ def _object_hook(obj):
         except KeyError:  # pragma no coverage
             raise UnknownMessageType("The message type {} is unknown".format(obj["_type"]))
 
-        itms = {k: v for k, v in obj.items() if k != "_type"}
+        allowed_args = inspect.getfullargspec(msg_type.__init__).args
+        itms = {k: v for k, v in obj.items() if k != "_type" and k in allowed_args}
         return msg_type(**itms)
     else:
         return obj
