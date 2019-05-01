@@ -14,6 +14,7 @@
 #    limitations under the License.
 ##############################################################################
 
+import inspect
 import sys
 
 import msgpack
@@ -113,7 +114,8 @@ class Message:
     @staticmethod
     def types():
         """
-        Return a mapping ``{type_name: message_type}`` for all defined Message's.
+        Return a mapping ``{type_name: (message_type, args)}`` for all defined Message's,
+        where ``args`` is a list of kwarg names that message_type's __init__ function accepts.
 
         :return: A dictionary of ``Message`` types.
         :rtype: Dict[str,type]
@@ -124,7 +126,7 @@ class Message:
             while classes_to_process:
                 atom = classes_to_process.pop()
                 classes_to_process += atom.__subclasses__()
-                Message._types[atom.__name__] = atom
+                Message._types[atom.__name__] = (atom, inspect.getfullargspec(atom.__init__).args)
         return Message._types
 
 
@@ -142,11 +144,11 @@ def _object_hook(obj):
     if '_type' in obj:
         try:
             class_dict = Message.types()
-            msg_type = class_dict[obj['_type']]
+            msg_type, allowed_args = class_dict[obj['_type']]
         except KeyError:  # pragma no coverage
             raise UnknownMessageType("The message type {} is unknown".format(obj["_type"]))
 
-        itms = {k: v for k, v in obj.items() if k != "_type"}
+        itms = {k: v for k, v in obj.items() if k in allowed_args}
         return msg_type(**itms)
     else:
         return obj
