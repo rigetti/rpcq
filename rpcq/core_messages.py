@@ -542,6 +542,14 @@ class Capture(Instruction):
     """Transmit the readout bit back to Lodgepole. 
           (Unnecessary for fully calibrated active reset captures)."""
 
+    phase: float = 0.0e+0
+    """Static phase angle [units of tau=2pi] by which the 
+          envelope quadratures are rotated."""
+
+    detuning: float = 0.0e+0
+    """Detuning [Hz] with which the pulse envelope should be 
+          modulated relative to the frame frequency."""
+
 
 @dataclass(eq=False, repr=False)
 class RackMeta(Message):
