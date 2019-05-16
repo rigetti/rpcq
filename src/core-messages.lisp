@@ -662,7 +662,22 @@
           (Unnecessary for fully calibrated active reset captures)."
       :type :bool
       :required t
-      :default t))
+      :default t)
+
+     (|phase|
+      :documentation "Static phase angle [units of tau=2pi] by which the \
+          envelope quadratures are rotated."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|detuning|
+      :documentation "Detuning [Hz] with which the pulse envelope should be \
+          modulated relative to the frame frequency."
+      :type :float
+      :required t
+      :default 0.0))  
+
 
   :documentation "Specify an acquisition on an rx-frame as well as the \
       filters to apply.")
