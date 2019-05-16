@@ -676,8 +676,7 @@
           modulated relative to the frame frequency."
       :type :float
       :required t
-      :default 0.0))  
-
+      :default 0.0))
 
   :documentation "Specify an acquisition on an rx-frame as well as the \
       filters to apply.")
