@@ -1005,6 +1005,26 @@
 
   :documentation "Configuration for a single readout transmit (QRT) sequencer.")
 
+(defmessage |QRTx2Sequencer| ()
+    (
+     (|tx_channel|
+      :documentation "The label of the associated tx channel."
+      :type :string
+      :required t)
+
+     (|sequencer_index|
+       :documentation "The sequencer index (0-15) of this sequencer."
+       :type :integer
+       :required t)
+
+     (|low_freq_range|
+      :documentation "Used to signal if this sequencer is in the low frequency configuration."
+      :type :bool
+      :required nil
+      :default nil))
+
+  :documentation "Configuration for a dual readout transmit (QRTx2) sequencer.")
+
 (defmessage |QRRSequencer| ()
     (
      (|rx_channel|
