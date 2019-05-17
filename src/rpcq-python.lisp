@@ -158,6 +158,7 @@ import sys
 
 from warnings import warn
 from rpcq._base import Message
+from rpcq.messages import ParameterSpec, PatchTarget
 from typing import Any, List, Dict, Optional
 
 if sys.version_info < (3, 7):
