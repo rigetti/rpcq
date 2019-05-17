@@ -48,6 +48,7 @@ setup(
     url='https://github.com/rigetticomputing/rpcq.git',
     description='''The RPC framework and message specification for Rigetti QCS.''',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     install_requires=[
         'future',
         'msgpack>=0.6',
