@@ -2,6 +2,7 @@ rpcq
 ====
 
 [![pipeline status](https://gitlab.com/rigetti/forest/rpcq/badges/master/pipeline.svg)](https://gitlab.com/rigetti/forest/rpcq/commits/master)
+[![pypi](https://img.shields.io/pypi/v/rpcq.svg)](https://pypi.org/project/rpcq/)
 [![docker pulls](https://img.shields.io/docker/pulls/rigetti/rpcq.svg)](https://hub.docker.com/r/rigetti/rpcq)
 
 The asynchronous RPC client-server framework and message specification for
