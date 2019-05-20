@@ -115,6 +115,13 @@ open `rlwrap sbcl` and run:
 [`quicklisp`](https://www.quicklisp.org/beta/), and
 (optionally) [`rlwrap`](https://github.com/hanslub42/rlwrap).
 
+We can also use the rpcq docker container to update the message spec without to install the
+requirements.
+
+```bash
+./docker_update_python_spec.sh
+```
+
 Running the Unit Tests
 ----------------------
 
