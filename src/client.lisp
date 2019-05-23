@@ -96,7 +96,7 @@
 
 (defun rpc-call (client call &rest args)
   "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
-  (let* ((uuid (unicly:uuid-princ-to-string (unicly:make-v4-uuid)))
+  (let* ((uuid (format nil "~a" (uuid:make-v4-uuid)))
          (request (make-instance '|RPCRequest|
                                  :|id| uuid
                                  :|params| (prepare-rpc-call-args args)

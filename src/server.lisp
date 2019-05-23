@@ -278,7 +278,7 @@ Argument descriptions:
   (check-type thread-count (integer 1))
   (check-type timeout (or null (real 0)))
   (check-type listen-addresses list)
-  (let ((pool-address (format nil "inproc://~a" (unicly:make-v4-uuid))))
+  (let ((pool-address (format nil "inproc://~a" (uuid:make-v4-uuid))))
     (cl-syslog:format-log logger ':info
                           "Spawning server at ~a .~%" listen-addresses)
     (pzmq:with-sockets ((clients :router :monitor) (workers :dealer :monitor))

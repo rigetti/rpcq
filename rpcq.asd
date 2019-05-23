@@ -27,7 +27,7 @@
                #:cl-messagepack         ; message packer
                #:bordeaux-threads       ; threaded RPC server
                #:local-time             ; local time for logs
-               #:unicly                 ; UUID generation
+               #:uuid                   ; UUID generation
                #:cl-syslog              ; send logs to syslogd
                #:flexi-streams          ; UTF8 encode/decode
                )
