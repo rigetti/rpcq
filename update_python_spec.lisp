@@ -1,7 +1,6 @@
 #!/usr/bin/env sbcl --script
 (load "~/.sbclrc")
 (ql:quickload :rpcq)
-(ql:quickload :split-sequence)
 (rpcq::clear-messages)
 
 (dolist (namespace '("messages" "core-messages"))
