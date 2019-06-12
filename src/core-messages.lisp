@@ -881,6 +881,13 @@
       :required nil
       :default 0.0)
 
+     (|channel_index|
+      :documentation "The channel index on the QGS, zero indexed from the lowest channel,
+        as installed in the box."
+      :type :integer
+      :required nil
+      :default 0)
+
      (|delay|
       :documentation "Delay [seconds] to account for inter-channel skew."
       :type :float
@@ -909,6 +916,13 @@
       :type :float
       :required nil
       :default 0.0)
+
+     (|channel_index|
+      :documentation "The channel index on the QRT, zero indexed from the lowest channel,
+        as installed in the box."
+      :type :integer
+      :required nil
+      :default 0)
 
      (|delay|
       :documentation "Delay [seconds] to account for inter-channel skew."
@@ -976,6 +990,15 @@
 
   :documentation "Configuration for a single QFD Sequencer.")
 
+(defmessage |QFDx2Sequencer| ()
+    (
+     (|tx_channel|
+      :documentation "The label of the associated channel."
+      :type :string
+      :required t))
+
+  :documentation "Configuration for a single QFDx2 Sequencer.")
+
 (defmessage |QGSSequencer| ()
     (
      (|tx_channel|
@@ -984,6 +1007,15 @@
       :required t))
 
   :documentation "Configuration for a single QGS Sequencer.")
+
+(defmessage |QGSx2Sequencer| ()
+    (
+     (|tx_channel|
+      :documentation "The label of the associated channel."
+      :type :string
+      :required t))
+
+  :documentation "Configuration for a single QGSx2 Sequencer.")
 
 (defmessage |QRTSequencer| ()
     (

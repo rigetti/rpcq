@@ -699,6 +699,10 @@ class QGSChannel(Message):
           should be in the range -45dB to 0dB and is rounded to the
           nearest 3dB step."""
 
+    channel_index: Optional[int] = 0
+    """The channel index on the QGS, zero indexed from the lowest channel,
+        as installed in the box."""
+
     delay: float = 0.0e+0
     """Delay [seconds] to account for inter-channel skew."""
 
@@ -718,6 +722,10 @@ class QRTChannel(Message):
     gain: Optional[float] = 0.0e+0
     """The output gain on the DAC in [dB]. Note that this should be in the range
        -45dB to 0dB and is rounded to the nearest 3dB step."""
+
+    channel_index: Optional[int] = 0
+    """The channel index on the QRT, zero indexed from the lowest channel,
+        as installed in the box."""
 
     delay: float = 0.0e+0
     """Delay [seconds] to account for inter-channel skew."""
@@ -771,9 +779,29 @@ class QFDSequencer(Message):
 
 
 @dataclass(eq=False, repr=False)
+class QFDx2Sequencer(Message):
+    """
+    Configuration for a single QFDx2 Sequencer.
+    """
+
+    tx_channel: str
+    """The label of the associated channel."""
+
+
+@dataclass(eq=False, repr=False)
 class QGSSequencer(Message):
     """
     Configuration for a single QGS Sequencer.
+    """
+
+    tx_channel: str
+    """The label of the associated channel."""
+
+
+@dataclass(eq=False, repr=False)
+class QGSx2Sequencer(Message):
+    """
+    Configuration for a single QGSx2 Sequencer.
     """
 
     tx_channel: str
