@@ -13,9 +13,8 @@
   "test-response")
 
 (defmacro with-unique-rpc-address ((addr) &body body)
-  (let* ((unique-address (concatenate 'string "inproc://" (format nil "~a" (uuid:make-v4-uuid)))))
-    `(let ((,addr ,unique-address))
-       ,@body)))
+  `(let ((,addr (concatenate 'string "inproc://" (format nil "~a" (uuid:make-v4-uuid)))))
+     ,@body))
 
 (deftest test-client-server-dialogue ()
   (with-unique-rpc-address (addr)
