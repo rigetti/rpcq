@@ -7,8 +7,8 @@
 
 (defparameter *expected-response* "test-response")
 
-(defun test-method (&key (sleep 1 sleep-p))
-  (when sleep-p
+(defun test-method (&key (sleep 1 slee-p))
+  (when slee-p
     (sleep sleep))
   "test-response")
 
