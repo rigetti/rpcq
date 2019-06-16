@@ -37,7 +37,8 @@
       (t
        (cerror "Just use the \"messages\" namespace."
                "Couldn't determine a valid namespace.")
-       "messages"))))
+       "messages")))
+  (declaim (special *mocked-namespace*)))
 
 ;; store all messages defined thus far in their namespace
 (defvar *messages* (make-hash-table :test 'equal))
@@ -212,10 +213,10 @@ We distinguish between the following options for any field type:
 
     ;; handle lists
     ((eq ':list (car field-type))
-     ;; Need not check if REQUIRED as NIL is still of type list
-     ;; We use 'simple-vector rather than 'list as this maps better to
-     ;; the JSON distinction betweel null and []
-     (values 'simple-vector (coerce default 'simple-vector)))
+     ;; Need not check if REQUIRED as NIL is still of type list. We
+     ;; use 'vector rather than 'list as this maps better to the JSON
+     ;; distinction between null and []
+     (values 'vector (coerce default 'vector)))
 
     ;; handle mappings
     ((eq ':map (car field-type))

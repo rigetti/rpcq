@@ -78,4 +78,22 @@
          (cloned (rpcq::deserialize (rpcq::serialize original))))
     (is (typep cloned 'rpcq::|RPCRequest|))
     (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
-    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))))
+    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned))))
+
+  (let* ((warning (make-instance 'rpcq::|RPCWarning|
+                                 :|body| "The warning string."
+                                 :|kind| "The type of the warning raised."))
+         (original (make-instance 'rpcq::|RPCError|
+                                  :|error| "The error message."
+                                  :|id| "The RPC request id."
+                                  :|warnings| `#(,warning)))
+         (cloned (rpcq::deserialize (rpcq::serialize original))))
+    (is (typep cloned 'rpcq::|RPCError|))
+    (let ((cloned-warnings (rpcq::|RPCError-warnings| cloned)))
+      (is (typep cloned-warnings 'vector))
+      (is (= 1 (length cloned-warnings)))
+      (let ((cloned-warning (elt cloned-warnings 0)))
+        (is (string= (rpcq::|RPCWarning-body| warning)
+                     (rpcq::|RPCWarning-body| cloned-warning)))
+        (is (string= (rpcq::|RPCWarning-kind| warning)
+                     (rpcq::|RPCWarning-kind| cloned-warning)))))))
