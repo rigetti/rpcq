@@ -32,8 +32,9 @@
              ;; send a communique
              (let ((server-response (rpcq:rpc-call client "test-method")))
                (is (string= *expected-response* server-response))))
-        ;; kill the server thread
-        (bt:destroy-thread server-thread)))))
+       ;; kill the server thread
+       (loop :while (bt:thread-alive-p server-thread)
+             :do (sleep 1) (bt:destroy-thread server-thread))))))
 
 (deftest test-client-timeout ()
   (with-unique-rpc-address (addr)
@@ -52,7 +53,8 @@
              (signals bt:timeout
                (rpcq:rpc-call client "test-method" :sleep 5)))
         ;; kill the server thread
-        (bt:destroy-thread server-thread)))))
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))))))
 
 (deftest test-server-timeout ()
   (with-unique-rpc-address (addr)
@@ -72,7 +74,8 @@
              (signals rpcq::rpc-error
                (rpcq:rpc-call client "test-method" :sleep 5)))
         ;; kill the server thread
-        (bt:destroy-thread server-thread)))))
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))))))
 
 (defun served-method ()
   (warn "The purpose of this test is to communicate a warning.")
@@ -97,4 +100,5 @@
                (is (string= "Some other reply payload."
                             (rpcq:rpc-call client "served-method")))))
         ;; kill the server thread
-        (bt:destroy-thread server-thread)))))
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))))))
