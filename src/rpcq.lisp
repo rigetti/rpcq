@@ -25,6 +25,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; use the name of the file to scope the messages
+  (declaim (special *mocked-namespace*))
   (defun current-namespace ()
     (cond
       ((not (null *load-truename*))
