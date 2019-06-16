@@ -213,10 +213,10 @@ We distinguish between the following options for any field type:
 
     ;; handle lists
     ((eq ':list (car field-type))
-     ;; Need not check if REQUIRED as NIL is still of type list
-     ;; We use 'simple-vector rather than 'list as this maps better to
-     ;; the JSON distinction betweel null and []
-     (values 'simple-vector (coerce default 'simple-vector)))
+     ;; Need not check if REQUIRED as NIL is still of type list We use
+     ;; 'vector rather than 'list as this maps better to the JSON
+     ;; distinction betweel null and []
+     (values 'vector (coerce default 'vector)))
 
     ;; handle mappings
     ((eq ':map (car field-type))
