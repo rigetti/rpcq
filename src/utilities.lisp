@@ -28,3 +28,8 @@
        (fboundp symbol)
        (not (macro-function symbol))
        (not (special-operator-p symbol))))
+
+(defmacro with-unique-rpc-address ((addr) &body body)
+  "Bind ADDR in the context of BODY to a unique address acceptable to RPCQ:START-SERVER."
+  `(let ((,addr (format nil "inproc://~a" (uuid:make-v4-uuid))))
+     ,@body))

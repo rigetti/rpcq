@@ -27,6 +27,7 @@
            #:dispatch-table-add-handler
            #:start-server
            #:with-rpc-client
+           #:with-unique-rpc-address
            #:rpc-call
            ;; RPC client/server errors and error accessors
            #:not-an-rpcrequest
