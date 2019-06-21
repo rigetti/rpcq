@@ -285,6 +285,11 @@
      (|topological_swaps|
       :documentation "Total number of SWAPs in the native quil program."
       :type :integer
+      :required nil)
+
+     (|runtime_estimation|
+      :documentation "The estimated runtime (milliseconds) on a Rigetti QPU for a protoquil program."
+      :type :float
       :required nil))
   :documentation "Metadata for a native quil program.")
 

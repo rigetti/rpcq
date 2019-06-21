@@ -249,6 +249,9 @@ class NativeQuilMetadata(Message):
     topological_swaps: Optional[int] = None
     """Total number of SWAPs in the native quil program."""
 
+    runtime_estimation: Optional[float] = None
+    """The estimated runtime (milliseconds) on a Rigetti QPU for a protoquil program."""
+
 
 @dataclass(eq=False, repr=False)
 class NativeQuilResponse(Message):
