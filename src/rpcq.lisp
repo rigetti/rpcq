@@ -95,6 +95,9 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 (defmethod %serialize ((payload string))
   payload)
 
+(defmethod %serialize ((payload rational))
+  (%serialize (float payload)))
+
 (defmethod %serialize ((payload hash-table))
   (let ((hash (make-hash-table :test #'equal)))
     (loop :for k :being :the :hash-keys :of payload

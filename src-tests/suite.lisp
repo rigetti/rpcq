@@ -73,9 +73,11 @@
 (deftest test-serialize-deserialize ()
   (let* ((original (make-instance 'rpcq::|RPCRequest|
                                   :|method| "test-method"
-                                  :|params| (make-hash-table)
+                                  :|params| (alexandria:alist-hash-table
+                                             '(("one-half" . 1/2)))
                                   :|id| "test-id"))
          (cloned (rpcq::deserialize (rpcq::serialize original))))
     (is (typep cloned 'rpcq::|RPCRequest|))
     (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
-    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))))
+    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))
+    (is (= 0.5 (gethash "one-half" (rpcq::|RPCRequest-params| cloned))))))
