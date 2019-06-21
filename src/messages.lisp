@@ -287,7 +287,7 @@
       :type :integer
       :required nil)
 
-     (|runtime_estimation|
+     (|qpu_runtime_estimation|
       :documentation "The estimated runtime (milliseconds) on a Rigetti QPU for a protoquil program."
       :type :float
       :required nil))
