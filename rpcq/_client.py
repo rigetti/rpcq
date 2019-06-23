@@ -61,7 +61,7 @@ class Client:
 
     def __setattr__(self, key, value):
         """
-        Ensure rpc_timeout attribute gets update with timeout. Currently keeping self.timeout and
+        Ensure rpc_timeout attribute gets updated with timeout. Currently keeping self.timeout and
         self.rpc_timeout for backwards compatibility. We should move towards using rpc_timeout only.
 
         :param key: attribute key
@@ -69,12 +69,13 @@ class Client:
         :return:
         """
         if key == 'timeout':
+            warn('The Client.timeout attribute is deprecated and will eventually be removed. Please use Client.rpc_timeout instead.')
             self.rpc_timeout = value
         super().__setattr__(key, value)
 
     async def call_async(self, method_name: str, *args, rpc_timeout: float = None, **kwargs):
         """
-        Send JSON RPC request to a backend socket and receive reply (asynchronously)
+        Send JSON RPC request to a backend socket and receive reply (asynchronously).
 
         :param method_name: Method name
         :param args: Args that will be passed to the remote function
