@@ -34,14 +34,16 @@ def rpc_request(method_name: str, *args, **kwargs) -> rpcq.messages.RPCRequest:
     :param kwargs: Keyword arguments
     :return: JSON RPC formatted dict
     """
+    params = {'**kwargs': kwargs}
+    
     if args:
-        kwargs['*args'] = args
+        params['*args'] = args
 
     return rpcq.messages.RPCRequest(
         jsonrpc='2.0',
         id=str(uuid.uuid4()),
         method=method_name,
-        params=kwargs
+        params=params
     )
 
 
