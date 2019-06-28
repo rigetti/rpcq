@@ -192,25 +192,22 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                "Request ~a received for ~a"
                                                (|RPCRequest-id| request)
                                                (|RPCRequest-method| request))
-                         
                          (let ((kwargs-as-plist
-                                (if (gethash "**kwargs" (|RPCRequest-params| request))
-                                    (loop :for key :being :the :hash-keys :of (gethash "**kwargs" (|RPCRequest-params| request))
-                                       :using (hash-value val)
-                                       :collect (str->lisp-keyword key)
-                                       :collect val)
-                                    nil))
+                                 (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
+                                         :using (hash-value val)
+                                       :unless (string= "*args" key)
+                                         :append (list (str->lisp-keyword key) val)))
                                (args-as-list (gethash "*args" (|RPCRequest-params| request))))
                            (let ((f (gethash (|RPCRequest-method| request) dispatch-table)))
                              (unless f
                                (error 'unknown-rpc-method
                                       :method-name (|RPCRequest-method| request)))
-                             (setf result 
+                             (setf result
                                    (if timeout
                                        (bt:with-timeout (timeout)
-                                                        (apply f (concatenate 'list args-as-list kwargs-as-plist)))
+                                         (apply f (concatenate 'list args-as-list kwargs-as-plist)))
                                        (apply f (concatenate 'list args-as-list kwargs-as-plist))))
-                             
+
                              (setf reply (make-instance '|RPCReply|
                                                         :|id| (|RPCRequest-id| request)
                                                         :|result| result

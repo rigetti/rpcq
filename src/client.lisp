@@ -87,12 +87,9 @@
                     (val (second args)))
                 (setf (gethash key **kwargs) val)
                 (process-**kwargs (rest (rest args))))))))
-      
       (process-args args)
-      (alexandria:plist-hash-table
-       (list "*args" *args
-             "**kwargs" **kwargs)
-       :test #'equal))))
+      (setf (gethash "*args" **kwargs) *args)
+      **kwargs)))
 
 (defun rpc-call (client call &rest args)
   "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
