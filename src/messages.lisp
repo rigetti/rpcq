@@ -386,5 +386,15 @@
      (|id|
       :documentation "QPU request ID."
       :type :string
-      :required t))
+      :required t)
+
+     (|user_id|
+      :documentation "User ID for the user that spawned this QPU request."
+      :type :string
+      :required nil)
+
+     (|user_token|
+      :documentation "User authentication token belonging to the user that spawned this QPU request."
+      :type :string
+      :required nil))
   :documentation "Program and patch values to send to the QPU for execution.")

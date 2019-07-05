@@ -1226,6 +1226,7 @@
       :documentation "An optional payload used to match this job with a \
           particular execution target."
       :type |TimeBomb|
+      :deprecated t
       :required nil))
 
   :documentation "Job which is sent directly to the executor")

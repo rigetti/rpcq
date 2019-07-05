@@ -349,4 +349,10 @@ class QPURequest(Message):
     id: str
     """QPU request ID."""
 
+    user_id: Optional[str] = None
+    """User ID for the user that spawned this QPU request."""
+
+    user_token: Optional[str] = None
+    """User authentication token belonging to the user that spawned this QPU request."""
+
 
