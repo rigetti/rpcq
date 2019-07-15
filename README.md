@@ -129,6 +129,9 @@ Running the Unit Tests
 ----------------------
 
 The `rpcq` repository is configured with GitLab CI to automatically run the unit tests.
+The tests run within a container based off of the
+[`rigetti/lisp`](https://hub.docker.com/r/rigetti/lisp) Docker image, which is pinned to a specific
+tag. If you need a more recent version of the image, update the tag in the `.gitlab-ci.yml`.
 
 The Python unit tests can be executed locally by running `pytest` from the top-level
 directory of the repository (assuming you have installed the test requirements).
@@ -153,7 +156,12 @@ Automated Packaging with Docker
 
 The CI pipeline for `rpcq` produces a Docker image, available at
 [`rigetti/rpcq`](https://hub.docker.com/r/rigetti/rpcq). To get the latest stable
-version of `rpcq`, run `docker pull rigetti/rpcq`.
+version of `rpcq`, run `docker pull rigetti/rpcq`. The image is built from the
+[`rigetti/lisp`](https://hub.docker.com/r/rigetti/lisp) Docker image, which is pinned to a specific
+tag. If you need a more recent version of the image, update the tag in the `Dockerfile`.
+
+To learn more about the `rigetti/lisp` Docker image, check out the
+[`docker-lisp`](https://github.com/rigetti/docker-lisp) repository.
 
 Release Process
 ---------------
