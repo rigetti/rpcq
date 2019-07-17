@@ -25,7 +25,7 @@ test-lisp:
   only:
     refs:
       - branches
-  image: rigetti/quicklisp
+  image: rigetti/lisp:2019-07-11
   script:
     - sbcl --version
     - make install-test-deps
