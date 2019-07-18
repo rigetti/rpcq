@@ -319,7 +319,7 @@ LIMITATIONS:
                    ,@(when deprecated-by
                        `(:initarg ,(intern (symbol-name deprecated-by) :keyword)))
 
-                   :reader ,(accessor slot-name)
+                   :accessor ,(accessor slot-name)
                    :type ,slot-type
 
                    ;; only add documentation if present
