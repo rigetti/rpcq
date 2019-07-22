@@ -96,4 +96,12 @@
         (is (string= (rpcq::|RPCWarning-body| warning)
                      (rpcq::|RPCWarning-body| cloned-warning)))
         (is (string= (rpcq::|RPCWarning-kind| warning)
-                     (rpcq::|RPCWarning-kind| cloned-warning)))))))
+                     (rpcq::|RPCWarning-kind| cloned-warning))))))
+
+  (let ((rpcq::*use-false* nil))
+    (is (null (rpcq:deserialize (rpcq:serialize :false))))
+    (is (null (rpcq:deserialize (rpcq:serialize nil)))))
+
+  (let ((rpcq::*use-false* t))
+    (is (eql :false (rpcq:deserialize (rpcq:serialize :false))))
+    (is (null (rpcq:deserialize (rpcq:serialize nil))))))

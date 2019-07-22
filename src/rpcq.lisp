@@ -43,6 +43,10 @@
 ;; store all messages defined thus far in their namespace
 (defvar *messages* (make-hash-table :test 'equal))
 
+;; Wrapper for messagepack's treatment of false/nil.
+(defvar *use-false* t
+  "Discriminate between a false value and a nil value. If set to NIL both :FALSE and NIL with serialize and deserialize into NIL.")
+
 (defun clear-messages ()
   "Clear the stored message definitions."
   (clrhash *messages*))
@@ -70,7 +74,8 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 
 (defun serialize (obj &optional stream)
   "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."
-  (let ((messagepack:*encode-alist-as-map* nil))
+  (let ((messagepack:*encode-alist-as-map* nil)
+        (messagepack::*use-false* *use-false*))
     (etypecase stream
       (stream
        (messagepack:encode-stream (%serialize obj) stream))
@@ -132,11 +137,12 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
 
 (defun deserialize (payload)
   "Deserialize the object(s) encoded in PAYLOAD (string or stream)."
-  (etypecase payload
-    (vector
-     (%deserialize (messagepack:decode payload)))
-    (stream
-     (%deserialize (messagepack:decode-stream payload)))))
+  (let ((messagepack::*use-false* *use-false*))
+    (etypecase payload
+      (vector
+       (%deserialize (messagepack:decode payload)))
+      (stream
+       (%deserialize (messagepack:decode-stream payload))))))
 
 (defun slot-type-and-initform (field-type required default)
   "Translate a FIELD-TYPE to a Lisp type and initform taking into account
