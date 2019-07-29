@@ -88,7 +88,7 @@
                 (setf (gethash key **kwargs) val)
                 (process-**kwargs (rest (rest args))))))))
       (process-args args)
-      (setf (gethash "*args" **kwargs) *args)
+      (setf (gethash "*args" **kwargs) (nreverse *args))
       **kwargs)))
 
 (defun rpc-call (client call &rest args)
