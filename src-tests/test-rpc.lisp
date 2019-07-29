@@ -40,6 +40,29 @@
         #-ccl
         (bt:destroy-thread server-thread)))))
 
+(deftest test-param-order ()
+  (with-unique-rpc-address (addr)
+    (let* ((server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'list)
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           ;; hook up the client
+           (rpcq:with-rpc-client (client addr)
+             ;; send a communique
+             (let ((server-response (rpcq:rpc-call client "list" 1 2 3 :four "fore!")))
+               (is (equalp server-response #(1 2 3 "four" "fore!")))))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))
+
 (deftest test-client-timeout ()
   (with-unique-rpc-address (addr)
     (let* ((server-function
