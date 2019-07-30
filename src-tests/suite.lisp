@@ -68,39 +68,36 @@
     (is (typep (my-msg-flt m) 'double-float))
     (is (string= (my-msg-str m) "a string"))))
 
-
+(deftest test-prepare-rpc-call-args ()
+  (loop
+    :with testcases :=
+    '((() . ("*args" ()))
+      ((1 2 3 "four") . ("*args" (1 2 3 "four")))
+      ((:only-kw 23 :allowed t) . ("*args" () "only_kw" 23 "allowed" t))
+      (("a1" 42 3.0 :kw1 "k1" :kw-2 "k2") . ("*args" ("a1" 42 3.0) "kw1" "k1" "kw_2" "k2")))
+    :for (args . expected-plist) :in testcases :do
+      (is (equalp (rpcq::prepare-rpc-call-args args)
+                  (alexandria:plist-hash-table expected-plist :test 'equal)))))
 
 (deftest test-serialize-deserialize ()
   (let* ((original (make-instance 'rpcq::|RPCRequest|
                                   :|method| "test-method"
-                                  :|params| (make-hash-table)
+                                  :|params| (rpcq::prepare-rpc-call-args '())
                                   :|id| "test-with-empty-params"))
          (cloned (rpcq::deserialize (rpcq::serialize original))))
     (is (typep cloned 'rpcq::|RPCRequest|))
     (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
     (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))
-    (is (= 0
-           (hash-table-count (rpcq::|RPCRequest-params| original))
-           (hash-table-count (rpcq::|RPCRequest-params| cloned)))))
+    (is (equalp (rpcq::|RPCRequest-params| original)  (rpcq::|RPCRequest-params| cloned))))
 
   (let* ((original (make-instance 'rpcq::|RPCRequest|
                                   :|method| "test-method"
                                   :|params| (rpcq::prepare-rpc-call-args
-                                             '("a1" a2 42 :kw1 "k1" :kw-2 "k2"))
+                                             '("a1" 42 :kw1 "k1" :kw-2 "k2"))
                                   :|id| "test-with-non-empty-params"))
          (cloned (rpcq::deserialize (rpcq::serialize original)))
          (original-params (rpcq::|RPCRequest-params| original))
          (cloned-params (rpcq::|RPCRequest-params| cloned)))
-
-    ;; We can't simply test (EQUALP ORIGINAL-PARAMS CLONED-PARAMS) here because of the 'A2 symbol in
-    ;; *args, which gets deserialized as the STRING "A2".
-    (is (= 3 (hash-table-count original-params) (hash-table-count cloned-params)))
-    (is (equal '("a1" a2 42) (gethash "*args" original-params)))
-    (is (typep (gethash "*args" cloned-params) 'vector))
-    (is (equalp #("a1" "A2" 42) (gethash "*args" cloned-params)))
-    (remhash "*args" original-params)
-    (remhash "*args" cloned-params)
-    (equalp original-params (alexandria:plist-hash-table '("kw1" "k1" "kw_2" "k2")))
     (equalp original-params cloned-params))
 
   (let* ((warning (make-instance 'rpcq::|RPCWarning|
