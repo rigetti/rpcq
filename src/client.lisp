@@ -65,19 +65,16 @@
 
 
 (defun prepare-rpc-call-args (args)
-  (let ((*args (list))
-        (**kwargs (make-hash-table :test #'equal)))
+  (let ((**kwargs (make-hash-table :test #'equal)))
     (labels
-        ((process-args (args)
+        ((process-args (args *args)
            (cond
-             ((null args)
-              t)
-             ((keywordp (first args))
+             ((or (null args) (keywordp (first args)))
+              (setf (gethash "*args" **kwargs) (reverse *args))
               (process-**kwargs args))
              (t
-              (push (first args) *args)
-              (process-args (rest args)))))
-         
+              (process-args (rest args) (cons (first args) *args)))))
+
          (process-**kwargs (args)
            (cond
              ((null args)
@@ -87,8 +84,7 @@
                     (val (second args)))
                 (setf (gethash key **kwargs) val)
                 (process-**kwargs (rest (rest args))))))))
-      (process-args args)
-      (setf (gethash "*args" **kwargs) *args)
+      (process-args args '())
       **kwargs)))
 
 (defun rpc-call (client call &rest args)

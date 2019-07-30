@@ -74,11 +74,34 @@
   (let* ((original (make-instance 'rpcq::|RPCRequest|
                                   :|method| "test-method"
                                   :|params| (make-hash-table)
-                                  :|id| "test-id"))
+                                  :|id| "test-with-empty-params"))
          (cloned (rpcq::deserialize (rpcq::serialize original))))
     (is (typep cloned 'rpcq::|RPCRequest|))
     (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
-    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned))))
+    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))
+    (is (= 0
+           (hash-table-count (rpcq::|RPCRequest-params| original))
+           (hash-table-count (rpcq::|RPCRequest-params| cloned)))))
+
+  (let* ((original (make-instance 'rpcq::|RPCRequest|
+                                  :|method| "test-method"
+                                  :|params| (rpcq::prepare-rpc-call-args
+                                             '("a1" a2 42 :kw1 "k1" :kw-2 "k2"))
+                                  :|id| "test-with-non-empty-params"))
+         (cloned (rpcq::deserialize (rpcq::serialize original)))
+         (original-params (rpcq::|RPCRequest-params| original))
+         (cloned-params (rpcq::|RPCRequest-params| cloned)))
+
+    ;; We can't simply test (EQUALP ORIGINAL-PARAMS CLONED-PARAMS) here because of the 'A2 symbol in
+    ;; *args, which gets deserialized as the STRING "A2".
+    (is (= 3 (hash-table-count original-params) (hash-table-count cloned-params)))
+    (is (equal '("a1" a2 42) (gethash "*args" original-params)))
+    (is (typep (gethash "*args" cloned-params) 'vector))
+    (is (equalp #("a1" "A2" 42) (gethash "*args" cloned-params)))
+    (remhash "*args" original-params)
+    (remhash "*args" cloned-params)
+    (equalp original-params (alexandria:plist-hash-table '("kw1" "k1" "kw_2" "k2")))
+    (equalp original-params cloned-params))
 
   (let* ((warning (make-instance 'rpcq::|RPCWarning|
                                  :|body| "The warning string."
