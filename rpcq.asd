@@ -38,6 +38,7 @@
                (:file "utilities")
                (:file "rpcq")
                (:file "rpcq-python")
+               (:file "core-messages")
                (:file "messages")
                (:file "server")
                (:file "client")))
