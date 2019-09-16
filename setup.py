@@ -45,6 +45,7 @@ setup(
         'rpcq',
         'rpcq.external'
     ],
+    package_data={'rpcq': ['py.typed']},
     url='https://github.com/rigetticomputing/rpcq.git',
     description='''The RPC framework and message specification for Rigetti QCS.''',
     long_description=long_description,
@@ -59,6 +60,9 @@ setup(
     ],
     keywords='quantum rpc qcs',
     python_requires='>=3.6',
+    # zip_safe must be disabled in order for mypy to find the installed py.typed file, according to
+    # https://mypy.readthedocs.io/en/latest/installed_packages.html#making-pep-561-compatible-packages
+    zip_safe=False
 )
 
 # restore version.py to its previous state
