@@ -17,12 +17,14 @@
 Server that accepts JSON RPC requests and returns JSON RPC replies/errors.
 """
 import asyncio
+from dataclasses import dataclass
 import logging
 from asyncio import AbstractEventLoop
 from typing import Callable
 from datetime import datetime
 
 import zmq.asyncio
+from zmq.auth.asyncio import AsyncioAuthenticator
 
 from rpcq._base import to_msgpack, from_msgpack
 from rpcq._spec import RPCSpec
@@ -30,13 +32,20 @@ from rpcq.messages import RPCRequest
 
 _log = logging.getLogger(__name__)
 
+# Required values for ZeroMQ curve authentication, in lieu of a TypedDict
+@dataclass
+class ServerAuthConfig:
+    server_secret_key: bytes
+    server_public_key: bytes
+    client_keys_directory: str = ""
+        
 
 class Server:
     """
     Server that accepts JSON RPC calls through a socket.
     """
     def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False,
-                 serialize_exceptions: bool = True):
+                 serialize_exceptions: bool = True, auth_config: ServerAuthConfig = None):
         """
         Create a server that will be linked to a socket
 
@@ -50,6 +59,9 @@ class Server:
 
             IMPORTANT NOTE: When set to False, this *almost definitely* means an unrecoverable
             crash, and the Server should then be _shutdown().
+        :param auth_config: The configuration values necessary to enable Curve ZeroMQ authentication.
+            These must be provided at instantiation, so they are available between the creation of the 
+            context and socket.
         """
         self.announce_timing = announce_timing
         self.serialize_exceptions = serialize_exceptions
@@ -58,6 +70,9 @@ class Server:
         self._exit_handlers = []
 
         self._socket = None
+        self._auth_config = auth_config
+        self._authenticator = None
+        self._preloaded_keys = None
 
     def rpc_handler(self, f: Callable):
         """
@@ -77,6 +92,56 @@ class Server:
         """
         self._exit_handlers.append(f)
 
+    async def recv_multipart(self):
+        if self.auth_enabled:
+            return await self.recv_multipart_with_auth()
+        else:
+            # If auth is not enabled, then the client "User-Id" will not be retrieved from
+            #   the frames received, and we return None for that value.
+            return (*await self._socket.recv_multipart(), None)
+
+    async def recv_multipart_with_auth(self) -> (bytes, list, bytes, ):
+        """
+        Code taken from pyzmq itself: https://github.com/zeromq/pyzmq/blob/master/zmq/sugar/socket.py#L449
+          and then adapted to allow us to access the information in the frames.
+
+        When copy=True, only the contents of the messages are returned, rather than the messages themselves.
+          The message is necessary to be able to fetch the "User-Id", which is the public key the client used
+          to connect to this socket.
+
+        When using auth, knowing which client sent which message is important for authentication, and so 
+          we reimplement recv_multipart here, and return the client key as the final member of a tuple
+        """
+
+        copy = False
+        # Given a ROUTER socket, the first frame will be the sender's identity. 
+        #   While, per the docs, this _should_ be retrievable from any frame with
+        #   frame.get('Identity'), in practice this value was always blank.
+        #   If we don't record the identity value, messages cannot be returned to
+        #   the correct client.
+        identity_frame = await self._socket.recv(0, copy=copy, track=False)
+        identity = identity_frame.bytes
+
+        # The client_id is the public key the client used to establish this connection
+        #   It can be retrieved from all frames after the first. Here, we assume it
+        #   is the same among all frames, and set it to the value from the first frame
+        client_key = None
+
+        # After the identity frame, we assemble all further frames in a single buffer.
+        parts = bytearray(b'')
+        while self._socket.getsockopt(zmq.RCVMORE):
+            part = await self._socket.recv(0, copy=copy, track=False)
+            data = part.bytes
+            if client_key is None:
+                client_key = part.get('User-Id')
+                if not isinstance(client_key, bytes) and client_key is not None:
+                    client_key = client_key.encode('utf-8')
+            parts += data
+
+        _log.debug(f'Received authenticated request from client_key {client_key}')
+    
+        return (identity, parts, client_key)
+
     async def run_async(self, endpoint: str):
         """
         Run server main task (asynchronously).
@@ -86,7 +151,7 @@ class Server:
         self._connect(endpoint)
 
         # spawn an initial listen task
-        listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+        listen_task = asyncio.ensure_future(self.recv_multipart())
         task_list = [listen_task]
 
         while True:
@@ -102,8 +167,12 @@ class Server:
                     # empty_frame may either be:
                     # 1. a single null frame if the client is a REQ socket
                     # 2. an empty list (ie. no frames) if the client is a DEALER socket
-                    identity, *empty_frame, msg = done.result()
+                    identity, *empty_frame, msg, client_key = done.result()
                     request = from_msgpack(msg)
+                    try:
+                        request.params['client_key'] = client_key
+                    except Exception as e:
+                        _log.error(f'Failed to attach client_key to request: {e}')
 
                     # spawn a processing task
                     task_list.append(asyncio.ensure_future(
@@ -116,7 +185,7 @@ class Server:
                         raise e
                 finally:
                     # spawn a new listen task
-                    listen_task = asyncio.ensure_future(self._socket.recv_multipart())
+                    listen_task = asyncio.ensure_future(self.recv_multipart())
                     task_list.append(listen_task)
             else:
                 # if there's been an exception during processing, consider reraising it
@@ -172,6 +241,7 @@ class Server:
 
         context = zmq.asyncio.Context()
         self._socket = context.socket(zmq.ROUTER)
+        self.start_auth(context)
         self._socket.bind(endpoint)
 
         _log.info("Starting server, listening on endpoint {}".format(endpoint))
@@ -200,3 +270,69 @@ class Server:
             else:
                 raise e
 
+    @property
+    def auth_configured(self) -> bool:
+        return (self._auth_config is not None) and isinstance(self._auth_config.server_secret_key, bytes) and isinstance(self._auth_config.server_public_key, bytes)
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self._socket and self._socket.curve_server)
+
+    def start_auth(self, context: zmq.Context) -> bool:
+        """
+        Starts the ZMQ auth service thread, enabling authorization on all sockets within this context
+        """
+        if not self.auth_configured:
+            return False
+        self._socket.curve_secretkey = self._auth_config.server_secret_key
+        self._socket.curve_publickey = self._auth_config.server_public_key
+        self._socket.curve_server = True
+        self._authenticator = AsyncioAuthenticator(context)
+        if self._preloaded_keys:
+            self.set_client_keys(self._preloaded_keys)
+        else:
+            self.load_client_keys_from_directory()
+        self._authenticator.start()
+        return True
+
+    def stop_auth(self) -> bool:
+        """
+        Stops the ZMQ auth service thread, allowing NULL authenticated clients (only) to connect to
+            all threads within its context
+        """
+        if self._authenticator:
+            self._socket.curve_server = False
+            self._authenticator.stop()
+            return True
+        else:
+            return False
+
+    def load_client_keys_from_directory(self, directory: str = None) -> bool:
+        """
+        Reset authorized public key list to those present in the specified directory
+        """
+
+        # The directory must either be specified at class creation or on each method call
+        if directory is None:
+            if not self._auth_config.client_keys_directory:
+                raise Exception("Server Auth: Client keys directory required")
+            else:
+                directory = self._auth_config.client_keys_directory
+        if not self.auth_configured:
+            return False
+        self._authenticator.configure_curve(domain='*', location=self._auth_config.client_keys_directory)
+
+    def set_client_keys(self, client_keys: [bytes]):
+        """
+        Reset authorized public key list to this set. Avoids the disk read required by configure_curve,
+            and allows keys to be managed externally.
+
+        In some cases, keys may be preloaded before the authenticator is started. In this case, we 
+            cache those preloaded keys
+        """
+        if self._authenticator:
+            _log.debug(f"Authorizer: Setting client keys to {client_keys}")
+            self._authenticator.certs['*'] = {key: True for key in client_keys}
+        else:
+            _log.debug(f"Authorizer: Preloading client keys to {client_keys}")
+            self._preloaded_keys = client_keys

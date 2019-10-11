@@ -21,7 +21,7 @@ import logging
 import traceback
 from typing import Union
 
-from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input, \
+from rpcq._utils import rpc_reply, rpc_error, RPCMethodError, get_input, get_safe_input, \
                         catch_warnings
 from rpcq.messages import RPCRequest, RPCReply, RPCError
 
@@ -114,7 +114,7 @@ class RPCSpec(object):
 
             try:
                 # Run RPC and get result
-                args, kwargs = get_input(request.params)
+                args, kwargs = get_safe_input(request.params, rpc_handler)
                 result = rpc_handler(*args, **kwargs)
 
                 if asyncio.iscoroutine(result):
