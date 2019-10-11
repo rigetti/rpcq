@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from typing import Dict, Union
 from warnings import warn
 
@@ -29,21 +30,33 @@ from rpcq.messages import RPCError, RPCReply
 _log = logging.getLogger(__name__)
 
 
+# Required values for ZeroMQ curve authentication, in lieu of a TypedDict
+@dataclass
+class ClientAuthConfig:
+    client_secret_key: bytes
+    client_public_key: bytes
+    server_public_key: bytes
+
+
 class Client:
     """
     Client that executes methods on a remote server by sending JSON RPC requests to a socket.
     """
-    def __init__(self, endpoint: str, timeout: float = None):
+    def __init__(self, endpoint: str, timeout: float = None, auth_config: ClientAuthConfig = None):
         """
         Create a client that connects to a server at <endpoint>.
 
         :param str endpoint: Socket endpoint, e.g. "tcp://localhost:1234"
         :param float timeout: Timeout in seconds for Server response, set to None to disable the timeout
+        :param auth_config: The configuration values necessary to enable Curve ZeroMQ authentication.
+            These must be provided at instantiation, so they are available when the socket is created.
         """
         # TODO: leaving self.timeout for backwards compatibility; we should move towards using rpc_timeout only
         self.timeout = timeout
         self.rpc_timeout = timeout
         self.endpoint = endpoint
+
+        self._auth_config = auth_config
 
         self._socket = self._connect_to_socket(zmq.Context(), endpoint)
         # The async socket can't be created yet because it's possible that the current event loop during Client creation
@@ -58,6 +71,7 @@ class Client:
 
         # Cache of replies so that different tasks can share results with each other
         self._replies: Dict[str, Union[RPCReply, RPCError]] = {}
+
 
     def __setattr__(self, key, value):
         """
@@ -199,6 +213,7 @@ class Client:
         :return: Connected socket
         """
         socket = context.socket(zmq.DEALER)
+        self.enable_auth(socket)
         socket.connect(endpoint)
         socket.setsockopt(zmq.LINGER, 0)
         _log.debug("Client connected to endpoint %s", self.endpoint)
@@ -213,3 +228,19 @@ class Client:
             self._async_socket_cache = self._connect_to_socket(zmq.asyncio.Context(), self.endpoint)
 
         return self._async_socket_cache
+
+    @property
+    def auth_configured(self) -> bool:
+        return self._auth_config is not None
+
+    def enable_auth(self, socket=None) -> bool:
+        """
+        Enables Curve ZeroMQ Authentication if the necessary configuration is present
+        """
+        if not self.auth_configured:
+            return False
+        socket.curve_secretkey = self._auth_config.client_secret_key
+        socket.curve_publickey = self._auth_config.client_public_key
+        socket.curve_serverkey = self._auth_config.server_public_key
+        return True
+

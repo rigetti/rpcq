@@ -179,3 +179,6 @@ fabric.properties
 
 ### MyPi ###
 .mypy_cache
+
+### VSCode ###
+.vscode/
