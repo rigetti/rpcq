@@ -233,7 +233,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
                                                   :|warnings| warnings)))
-                     (error (c)
+                     (serious-condition (c)
                        (log-completion-message :err
                                                "Request ~a error: Unhandled error in host program:~%~a"
                                                (|RPCRequest-id| request)
