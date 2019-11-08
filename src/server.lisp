@@ -213,7 +213,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                         :|result| result
                                                         :|warnings| warnings))))
                          (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request)))
-                     
+
                      ;; this is where errors go where we can reply to the client
                      (unknown-rpc-method (c)
                        (declare (ignore c))
@@ -242,14 +242,14 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (princ-to-string c)
                                                   :|warnings| warnings))))
-                   
+
                    ;; send the client response, whether success or failure
                    (handler-case
                        (%push-raw-request receiver identity empty-frame (serialize reply))
                      (error (c)
                        (cl-syslog:format-log logger ':err
                                              "Threw generic error after RPC call, during reply encoding:~%~a" c)))))))
-        
+
          ;; this is where errors go where we can't even reply to the client
          (error (c)
            (cl-syslog:format-log logger ':err
