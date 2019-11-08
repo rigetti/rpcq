@@ -159,3 +159,36 @@
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
         (bt:destroy-thread server-thread)))))
+
+(defun test-error-method ()
+  (error "oof!"))
+
+(deftest test-log-backtrace ()
+  (with-unique-rpc-address (addr)
+    (let* ((log-stream (make-string-output-stream))
+           (server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'test-error-method)
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)
+                                    :debug t
+                                    :logger (make-instance 'cl-syslog:rfc5424-logger
+                                                           :app-name "rpcq-tests"
+                                                           :facility ':local0
+                                                           :maximum-priority ':err
+                                                           :log-writer
+                                                           (cl-syslog:stream-log-writer log-stream))))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           (rpcq:with-rpc-client (client addr)
+             (signals rpcq::rpc-error
+               (rpcq:rpc-call client "test-error-method"))
+             (is (search "TRIVIAL-BACKTRACE:PRINT-BACKTRACE" (get-output-stream-string log-stream))))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))

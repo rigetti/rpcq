@@ -149,6 +149,7 @@ By default, a symbol passed in for F will be automatically converted into the na
 
 (defun %rpc-server-thread-worker (&key
                                     dispatch-table
+                                    debug
                                     logger
                                     timeout
                                     pool-address)
@@ -238,6 +239,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                "Request ~a error: Unhandled error in host program:~%~a"
                                                (|RPCRequest-id| request)
                                                c)
+                       (when debug
+                         (cl-syslog:format-log logger ':err (trivial-backtrace:print-backtrace c :output nil)))
                        (setf reply (make-instance '|RPCError|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|error| (princ-to-string c)
@@ -261,7 +264,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (thread-count 5)
                        (logger (make-instance 'cl-syslog:rfc5424-logger
                                               :log-writer (cl-syslog:null-log-writer)))
-                       timeout)
+                       timeout
+                       debug)
   "Main loop of an RPCQ server.
 
 Argument descriptions:
@@ -275,6 +279,7 @@ Argument descriptions:
   (check-type thread-count (integer 1))
   (check-type timeout (or null (real 0)))
   (check-type listen-addresses list)
+  (check-type debug boolean)
   (let ((pool-address (format nil "inproc://~a" (uuid:make-v4-uuid))))
     (cl-syslog:format-log logger ':info
                           "Spawning server at ~a .~%" listen-addresses)
@@ -288,6 +293,7 @@ Argument descriptions:
                (dotimes (j thread-count)
                  (push (bt:make-thread (lambda () (%rpc-server-thread-worker
                                                    :dispatch-table dispatch-table
+                                                   :debug debug
                                                    :logger logger
                                                    :timeout timeout
                                                    :pool-address pool-address))
