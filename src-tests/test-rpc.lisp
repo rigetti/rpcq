@@ -138,3 +138,30 @@
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
         (bt:destroy-thread server-thread)))))
+
+(defun error-with-serious-condition ()
+  (error 'serious-condition))
+
+(deftest test-serious-condition ()
+  (with-unique-rpc-address (addr)
+    (let* ((server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'error-with-serious-condition)
+                 (rpcq:start-server :timeout 5
+                                    :dispatch-table dt
+                                    :listen-addresses (list addr)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           ;; hook up the client
+           (rpcq:with-rpc-client (client addr)
+             ;; send a communique
+             (signals rpc-error
+               (rpcq:rpc-call client "error-with-serious-condition")))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))
