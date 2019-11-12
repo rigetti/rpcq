@@ -213,7 +213,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                                             :|error| (princ-to-string c)
                                                             :|warnings| warnings))))
                               (go :skip-to-send)))
-                       (let ((*debugger-hook* #'error-processor))
+                       (let ((#+sbcl sb-ext:*invoke-debugger-hook*
+                              #-sbcl *debugger-hook* #'error-processor))
                          (setf start-time (get-internal-real-time))
                          (setf request (deserialize raw-request))
                          (unless (typep request '|RPCRequest|)
