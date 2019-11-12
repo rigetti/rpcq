@@ -51,7 +51,6 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=[
-        'future',
         'msgpack>=0.6',
         'python-rapidjson',
         'pyzmq>=17',
