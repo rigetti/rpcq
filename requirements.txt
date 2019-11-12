@@ -3,7 +3,6 @@ msgpack == 0.6
 python-rapidjson
 pyzmq>=17
 ruamel.yaml
-typing
 
 # testing
 numpy
