@@ -314,13 +314,12 @@ class Server:
 
         # The directory must either be specified at class creation or on each method call
         if directory is None:
-            if not self._auth_config.client_keys_directory:
-                raise Exception("Server Auth: Client keys directory required")
-            else:
+            if self._auth_config.client_keys_directory:
                 directory = self._auth_config.client_keys_directory
-        if not self.auth_configured:
+        if not directory or not self.auth_configured:
             return False
-        self._authenticator.configure_curve(domain='*', location=self._auth_config.client_keys_directory)
+        self._authenticator.configure_curve(domain='*', location=directory)
+        return True
 
     def set_client_keys(self, client_keys: [bytes]):
         """
