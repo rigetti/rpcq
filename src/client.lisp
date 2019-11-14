@@ -87,15 +87,19 @@
       (process-args args '())
       **kwargs)))
 
-(defun rpc-call (client call &rest args)
-  "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
-  (let* ((uuid (format nil "~a" (uuid:make-v4-uuid)))
-         (request (make-instance '|RPCRequest|
-                                 :|id| uuid
-                                 :|params| (prepare-rpc-call-args args)
-                                 :|method| (sanitize-name call)))
-         (payload (serialize request))
-         (socket (rpc-client-socket client)))
+(defun %rpc-call-raw-request (client call uuid payload args)
+  "An unsafe version of RPC-CALL that does not verify that PAYLOAD is valid RPCRequest payload.
+
+Useful for testing behavior when sending an invalid RPC request.
+
+* CLIENT:  an RPC-CLIENT.
+* CALL:    a STRING indicating the RPC method to call.
+* UUID:    the v4 UUID of the request.
+* PAYLOAD: an array of (UNSIGNED-BYTE 8) that houses the raw request.
+
+Returns the result of the RPC method call.
+"
+  (let ((socket (rpc-client-socket client)))
     (cffi:with-foreign-object (foreign-payload :uint8 (length payload))
       (dotimes (j (length payload))
         (setf (cffi:mem-aref foreign-payload ':uint8 j)
@@ -149,6 +153,17 @@
              (loop-til-reply))))
         (t
          (loop-til-reply))))))
+
+(defun rpc-call (client call &rest args)
+  "Makes a synchronous RPC call, designated by the string method name CALL, over the connection CLIENT.  ARGS is a plist of arguments.  Returns the result of the call directly."
+  (let* ((uuid (format nil "~a" (uuid:make-v4-uuid)))
+         (request (make-instance '|RPCRequest|
+                                 :|id| uuid
+                                 :|params| (prepare-rpc-call-args args)
+                                 :|method| (sanitize-name call)))
+         (payload (serialize request)))
+    (%rpc-call-raw-request client call uuid payload args)))
+
 
 (defmacro with-rpc-client ((client endpoint &rest options) &body body)
   "Opens an RPCQ client connection, referenced by CLIENT, at ENDPOINT.  The connection is automatically closed as this form is exited or unwound.  Hence, CLIENT is only valid during the execution of BODY, and it should not be stored or closed over.

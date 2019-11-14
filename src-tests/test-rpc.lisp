@@ -146,6 +146,7 @@
   (error "owie!"))
 
 (deftest test-error-handling ()
+  "Test that various types of processing errors are handled correctly."
   (dolist (rpc-method '("error-with-serious-condition"
                         "error-with-error-condition"
                         "unknown-method"))
@@ -170,3 +171,33 @@
                 :do (sleep 1) (bt:destroy-thread server-thread))
           #-ccl
           (bt:destroy-thread server-thread))))))
+
+(deftest test-invalid-rpc-request ()
+  "Test that invalid RPC requests are handled correctly."
+  (with-unique-rpc-address (addr)
+    (let* ((server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'test-method)
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           ;; The invalid request will be ignored, resulting in no response being sent, so we
+           ;; instead test that the request times out.
+           (rpcq:with-rpc-client (client addr :timeout 1)
+             (signals bt:timeout
+               (rpcq::%rpc-call-raw-request client
+                                            "test-method"
+                                            (princ-to-string (uuid:make-v4-uuid))
+                                            ;; not a valid |RPCRequest|
+                                            (make-array 8 :element-type '(unsigned-byte 8)
+                                                          :initial-element 0)
+                                            '())))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))
