@@ -158,7 +158,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
   (pzmq:with-socket receiver :dealer
     (pzmq:connect receiver pool-address)
     (loop
-      (handler-case
+       (tagbody
+          :start
           (let ((warnings (make-array 0 :adjustable t :fill-pointer 0))
                 request result reply start-time)
             (handler-bind
@@ -181,7 +182,10 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                                            "true"
                                            "false")))))
                 (multiple-value-bind (identity empty-frame raw-request)
-                    (%pull-raw-request receiver)
+                    (handler-case (%pull-raw-request receiver)
+                      (error (c)
+                        (cl-syslog:format-log logger ':err "Threw generic error before RPC call:~%~a" c)
+                        (go :start)))
                   (tagbody
                      (flet ((error-processor (c h)
                               (declare (ignore h))
@@ -250,12 +254,7 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                          (%push-raw-request receiver identity empty-frame (serialize reply))
                        (error (c)
                          (cl-syslog:format-log logger ':err
-                                               "Threw generic error after RPC call, during reply encoding:~%~a" c))))))))
-        
-        ;; this is where errors go where we can't even reply to the client
-        (error (c)
-          (cl-syslog:format-log logger ':err
-                                "Threw generic error before RPC call:~%~a" c))))))
+                                               "Threw generic error after RPC call, during reply encoding:~%~a" c))))))))))))
 
 (defun start-server (&key
                        dispatch-table
