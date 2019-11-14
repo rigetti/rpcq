@@ -182,12 +182,14 @@
 (deftest test-invalid-rpc-request ()
   "Test that invalid RPC requests are handled correctly."
   (with-unique-rpc-address (addr)
-    (let* ((server-function
+    (let* ((log-stream (make-string-output-stream))
+           (server-function
              (lambda ()
                (let ((dt (rpcq:make-dispatch-table)))
                  (rpcq:dispatch-table-add-handler dt 'test-method)
                  (rpcq:start-server :dispatch-table dt
-                                    :listen-addresses (list addr)))))
+                                    :listen-addresses (list addr)
+                                    :logger (make-test-logger log-stream)))))
            (server-thread (bt:make-thread server-function)))
       (sleep 1)
       (unwind-protect
@@ -201,7 +203,9 @@
                                             ;; not a valid |RPCRequest|
                                             (make-array 8 :element-type '(unsigned-byte 8)
                                                           :initial-element 0)
-                                            '())))
+                                            '())
+               (is (search "Threw generic error before RPC call"
+                           (get-output-stream-string log-stream)))))
         ;; kill the server thread
         #+ccl
         (loop :while (bt:thread-alive-p server-thread)
