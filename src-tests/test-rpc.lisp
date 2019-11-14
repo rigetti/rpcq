@@ -4,6 +4,13 @@
 
 (in-package #:rpcq-tests)
 
+(defun make-test-logger (&optional (stream *error-output*))
+  (make-instance 'cl-syslog:rfc5424-logger
+                 :app-name "rpcq-tests"
+                 :facility ':local0
+                 :maximum-priority ':err
+                 :log-writer (cl-syslog:stream-log-writer stream)))
+
 
 (defparameter *expected-response* "test-response")
 
@@ -195,6 +202,46 @@
                                             (make-array 8 :element-type '(unsigned-byte 8)
                                                           :initial-element 0)
                                             '())))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))
+
+(deftest test-server-deserialize-error ()
+  "Test that deserialization errors are handled correctly."
+  (with-unique-rpc-address (addr)
+    (let* ((log-stream (make-string-output-stream))
+           (server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'test-method)
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)
+                                    :logger (make-test-logger log-stream)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           ;; The invalid request will be ignored, resulting in no response being sent, so we
+           ;; instead test that the request times out.
+           (rpcq:with-rpc-client (client addr :timeout 1)
+             (signals bt:timeout
+               (rpcq::%rpc-call-raw-request client
+                                            "test-method"
+                                            (princ-to-string (uuid:make-v4-uuid))
+                                            ;; Bind MESSAGEPACK:*EXTENDED-TYPES* here, which allows
+                                            ;; us to serialize the extended type. Since the bindings
+                                            ;; aren't in affect for the rpc server, this will result
+                                            ;; in an error when messagepack attempts to deserialize
+                                            ;; the unknown extended type.
+                                            (let ((messagepack:*extended-types*
+                                                    (messagepack:define-extension-types
+                                                        '(0 deserialize-bomb))))
+                                              (rpcq::serialize (make-instance 'deserialize-bomb :id 9)))
+                                            '()))
+             (is (search "Threw generic error before RPC call"
+                         (get-output-stream-string log-stream))))
         ;; kill the server thread
         #+ccl
         (loop :while (bt:thread-alive-p server-thread)

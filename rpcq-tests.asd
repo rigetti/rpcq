@@ -20,6 +20,7 @@
   :author "Rigetti Computing <info@rigetti.com>"
   :depends-on (
                #:rpcq
+               #:cl-messagepack
                #:uiop
                #:fiasco
                )
