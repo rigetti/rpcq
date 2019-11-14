@@ -21,6 +21,7 @@
   :depends-on (
                #:rpcq
                #:cl-messagepack
+               #:cl-syslog
                #:uiop
                #:fiasco
                )
