@@ -30,6 +30,7 @@
                #:uuid                   ; UUID generation
                #:cl-syslog              ; send logs to syslogd
                #:flexi-streams          ; UTF8 encode/decode
+               #:trivial-backtrace      ; logging backtraces
                )
   :in-order-to ((asdf:test-op (asdf:test-op #:rpcq-tests)))
   :pathname "src/"

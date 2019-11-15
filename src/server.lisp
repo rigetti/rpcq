@@ -151,6 +151,7 @@ By default, a symbol passed in for F will be automatically converted into the na
                                     dispatch-table
                                     logger
                                     timeout
+                                    debug
                                     pool-address)
   "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGING-STREAM.
 
@@ -239,11 +240,18 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                            (f (gethash (|RPCRequest-method| request) dispatch-table)))
                        (unless f
                          (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
-                       (setf result
-                             (if timeout
-                                 (bt:with-timeout (timeout)
-                                   (apply f (concatenate 'list args-as-list kwargs-as-plist)))
-                                 (apply f (concatenate 'list args-as-list kwargs-as-plist))))
+                       (flet ((apply-handler ()
+                                (handler-bind
+                                    ((error (lambda (c)
+                                              (when debug
+                                                (finish-output *error-output*)
+                                                (trivial-backtrace:print-backtrace c :output *error-output*)))))
+                                  (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
+                         (setf result
+                               (if timeout
+                                   (bt:with-timeout (timeout)
+                                     (apply-handler))
+                                   (apply-handler))))
                        (setf reply (make-instance '|RPCReply|
                                                   :|id| (|RPCRequest-id| request)
                                                   :|result| result
@@ -263,7 +271,8 @@ DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of ty
                        (thread-count 5)
                        (logger (make-instance 'cl-syslog:rfc5424-logger
                                               :log-writer (cl-syslog:null-log-writer)))
-                       timeout)
+                       timeout
+                       debug)
   "Main loop of an RPCQ server.
 
 Argument descriptions:
@@ -276,6 +285,7 @@ Argument descriptions:
   (check-type logger cl-syslog:rfc5424-logger)
   (check-type thread-count (integer 1))
   (check-type timeout (or null (real 0)))
+  (check-type debug boolean)
   (check-type listen-addresses list)
   (let ((pool-address (format nil "inproc://~a" (uuid:make-v4-uuid))))
     (cl-syslog:format-log logger ':info
@@ -292,6 +302,7 @@ Argument descriptions:
                                                    :dispatch-table dispatch-table
                                                    :logger logger
                                                    :timeout timeout
+                                                   :debug debug
                                                    :pool-address pool-address))
                                        :name (format nil "RPC-server-thread-~a" j))
                        thread-pool))
