@@ -73,8 +73,8 @@ class RPCRequest(Message):
     jsonrpc: str = "2.0"
     """The JSONRPC version."""
 
-    client_key: str = ""
-    """The ZeroMQ CURVE public key used to make the request. Blank if no key is used"""
+    client_key: Optional[str] = None
+    """The ZeroMQ CURVE public key used to make the request, as received by the server. Empty if no key is used."""
 
 
 @dataclass(eq=False, repr=False)
