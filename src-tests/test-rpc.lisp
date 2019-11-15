@@ -11,6 +11,17 @@
                  :maximum-priority ':err
                  :log-writer (cl-syslog:stream-log-writer stream)))
 
+;; stolen from quilc
+(defmacro special-bindings-let* (let-defs &body body)
+  "Bind LET-DEFS as in LET, and add those LET-DEFS to bordeaux-threads:*default-special-bindings* in the same LET."
+  `(let* (,@(loop :for (name value) :in let-defs
+                  :collect `(,name ,value))
+          (bordeaux-threads:*default-special-bindings*
+            (list* ,@(loop :for (name value) :in let-defs
+                           :collect `(cons ',name (list 'quote ,name)))
+                   bordeaux-threads:*default-special-bindings*)))
+     ,@body))
+
 
 (defparameter *expected-response* "test-response")
 
@@ -246,6 +257,44 @@
                                             '()))
              (is (search "Threw generic error before RPC call"
                          (get-output-stream-string log-stream))))
+        ;; kill the server thread
+        #+ccl
+        (loop :while (bt:thread-alive-p server-thread)
+              :do (sleep 1) (bt:destroy-thread server-thread))
+        #-ccl
+        (bt:destroy-thread server-thread)))))
+
+(defun oof-find-me-on-the-stack ()
+  (error "oof!"))
+
+(defun test-error-method ()
+  (oof-find-me-on-the-stack))
+
+(deftest test-log-backtrace ()
+  (with-unique-rpc-address (addr)
+    (let* ((error-stream (make-string-output-stream))
+           (log-stream (make-string-output-stream))
+           (server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt 'test-error-method)
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)
+                                    :debug t
+                                    :logger (make-test-logger log-stream)))))
+           (server-thread (special-bindings-let* ((*error-output* error-stream))
+                            ;; We want the *ERROR-OUTPUT* binding to remain in effect for the worker
+                            ;; threads created by SERVER-THREAD (grandchildren of the current
+                            ;; thread), hence we add BT:*DEFAULT-SPECIAL-BINDINGS* to itself.
+                            (special-bindings-let* ((bt:*default-special-bindings* bt:*default-special-bindings*))
+                              (bt:make-thread server-function)))))
+      (sleep 1)
+      (unwind-protect
+           (rpcq:with-rpc-client (client addr)
+             (signals rpcq::rpc-error
+               (rpcq:rpc-call client "test-error-method"))
+             (is (search "Unhandled error in host program" (get-output-stream-string log-stream)))
+             (is (search "OOF-FIND-ME-ON-THE-STACK" (get-output-stream-string error-stream))))
         ;; kill the server thread
         #+ccl
         (loop :while (bt:thread-alive-p server-thread)
