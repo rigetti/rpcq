@@ -83,7 +83,12 @@
      (|id|
       :documentation "RPC request id (used to verify that request and response belong together)."
       :type :string
-      :required t))
+      :required t)
+
+    (|client_key|
+      :documentation "The ZeroMQ CURVE public key used to make the request, as received by the server. Empty if no key is used."
+      :type :string
+      :required nil))
 
   :documentation "A single request object according to the JSONRPC standard.")
 
