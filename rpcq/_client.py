@@ -17,7 +17,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 from warnings import warn
 
 import zmq
@@ -42,7 +42,7 @@ class Client:
     """
     Client that executes methods on a remote server by sending JSON RPC requests to a socket.
     """
-    def __init__(self, endpoint: str, timeout: float = None, auth_config: ClientAuthConfig = None):
+    def __init__(self, endpoint: str, timeout: Optional[float] = None, auth_config: Optional[ClientAuthConfig] = None):
         """
         Create a client that connects to a server at <endpoint>.
 

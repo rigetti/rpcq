@@ -20,7 +20,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 from asyncio import AbstractEventLoop
-from typing import Callable
+from typing import Callable, List, Optional, Tuple
 from datetime import datetime
 
 import zmq.asyncio
@@ -45,7 +45,7 @@ class Server:
     Server that accepts JSON RPC calls through a socket.
     """
     def __init__(self, rpc_spec: RPCSpec = None, announce_timing: bool = False,
-                 serialize_exceptions: bool = True, auth_config: ServerAuthConfig = None):
+                 serialize_exceptions: bool = True, auth_config: Optional[ServerAuthConfig] = None):
         """
         Create a server that will be linked to a socket
 
@@ -100,7 +100,7 @@ class Server:
             #   the frames received, and we return None for that value.
             return (*await self._socket.recv_multipart(), None)
 
-    async def recv_multipart_with_auth(self) -> (bytes, list, bytes, ):
+    async def recv_multipart_with_auth(self) -> Tuple[bytes, list, bytes]:
         """
         Code taken from pyzmq itself: https://github.com/zeromq/pyzmq/blob/master/zmq/sugar/socket.py#L449
           and then adapted to allow us to access the information in the frames.
@@ -169,10 +169,7 @@ class Server:
                     # 2. an empty list (ie. no frames) if the client is a DEALER socket
                     identity, *empty_frame, msg, client_key = done.result()
                     request = from_msgpack(msg)
-                    try:
-                        request.params['client_key'] = client_key
-                    except Exception as e:
-                        _log.error(f'Failed to attach client_key to request: {e}')
+                    request.params['client_key'] = client_key
 
                     # spawn a processing task
                     task_list.append(asyncio.ensure_future(
@@ -307,7 +304,7 @@ class Server:
         else:
             return False
 
-    def load_client_keys_from_directory(self, directory: str = None) -> bool:
+    def load_client_keys_from_directory(self, directory: Optional[str] = None) -> bool:
         """
         Reset authorized public key list to those present in the specified directory
         """
@@ -321,7 +318,7 @@ class Server:
         self._authenticator.configure_curve(domain='*', location=directory)
         return True
 
-    def set_client_keys(self, client_keys: [bytes]):
+    def set_client_keys(self, client_keys: List[bytes]):
         """
         Reset authorized public key list to this set. Avoids the disk read required by configure_curve,
             and allows keys to be managed externally.
