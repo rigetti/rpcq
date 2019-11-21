@@ -15,8 +15,8 @@
 ##############################################################################
 import asyncio
 import logging
+import sys
 import time
-from dataclasses import dataclass
 from typing import Dict, Optional, Union
 from warnings import warn
 
@@ -26,6 +26,11 @@ import zmq.asyncio
 from rpcq._base import to_msgpack, from_msgpack
 import rpcq._utils as utils
 from rpcq.messages import RPCError, RPCReply
+
+if sys.version_info < (3, 7):
+    from rpcq.external.dataclasses import dataclass
+else:
+    from dataclasses import dataclass
 
 _log = logging.getLogger(__name__)
 

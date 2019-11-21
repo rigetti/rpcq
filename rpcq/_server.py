@@ -17,8 +17,8 @@
 Server that accepts JSON RPC requests and returns JSON RPC replies/errors.
 """
 import asyncio
-from dataclasses import dataclass
 import logging
+import sys
 from asyncio import AbstractEventLoop
 from typing import Callable, List, Optional, Tuple
 from datetime import datetime
@@ -29,6 +29,11 @@ from zmq.auth.asyncio import AsyncioAuthenticator
 from rpcq._base import to_msgpack, from_msgpack
 from rpcq._spec import RPCSpec
 from rpcq.messages import RPCRequest
+
+if sys.version_info < (3, 7):
+    from rpcq.external.dataclasses import dataclass
+else:
+    from dataclasses import dataclass
 
 _log = logging.getLogger(__name__)
 
