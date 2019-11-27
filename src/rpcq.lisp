@@ -47,6 +47,22 @@
 (defvar *use-false* t
   "Discriminate between a false value and a nil value. If set to NIL both :FALSE and NIL with serialize and deserialize into NIL.")
 
+(defun register-message (namespace entry)
+  "Add ENTRY to *MESSAGES* under NAMESPACE.
+
+PARAMETERS:
+  * NAMESPACE - a STRING
+  * ENTRY - a list of the form (CLASS-NAME PARENT-CLASS-NAME FIELD-SPECS DOCUMENTATION)"
+  (check-type namespace string)
+  (check-type entry alexandria:proper-list)
+  (assert (= 4 (length entry)))
+  (let ((messages (gethash namespace *messages*)))
+    (setf (gethash namespace *messages*)
+          ;; Cons ENTRY onto the tail of the list rather than PUSHing onto the head to ensure the
+          ;; order of messages is preserved when generating the python files.
+          (nconc (remove (first entry) messages :key #'first)
+                 (list entry)))))
+
 (defun clear-messages ()
   "Clear the stored message definitions."
   (clrhash *messages*))
@@ -276,9 +292,6 @@ LIMITATIONS:
   (assert (or (null parent-name)
               (and (typep parent-name 'cons)
                    (= 1 (length parent-name)))))
-  (let* ((namespace (current-namespace))
-         (messages (gethash namespace *messages*)))
-    (setf (gethash namespace *messages*) (nconc messages `((,class-name ,(first parent-name) ,field-specs ,documentation)))))
   (labels ((accessor (slot-name)
              (alexandria:symbolicate (symbol-name class-name)
                                      "-"
@@ -363,8 +376,11 @@ LIMITATIONS:
                `( ,(intern (symbol-name slot-name) :keyword)
                   (%deserialize (gethash ,(symbol-name slot-name) ,json))))))
     (alexandria:with-gensyms (obj init-args)
-      (let ((slot-names (mapcar #'car field-specs)))
+      (let ((namespace (current-namespace))
+            (slot-names (mapcar #'car field-specs)))
         `(progn
+           (register-message ,namespace
+                             '(,class-name ,(first parent-name) ,field-specs ,documentation))
            ;; here we define the actual message class object.
            ;; the most complicated aspect is setting up all the slot definitions
            ;; (which store default init values, type info, ...).
