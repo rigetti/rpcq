@@ -147,10 +147,8 @@ By default, a symbol passed in for F will be automatically converted into the na
   |error|)
 
 
-(defvar *warnings*)
-
-(defun %process-request (request start-time dispatch-table logger timeout debug)
-  (macrolet ((log-completion-message (priority control &rest args)
+(defun log-completion-message (logger request reply start-time)
+  (macrolet ((log-it (priority control &rest args)
                `(cl-syslog:rfc-log
                     (logger ,priority ,control ,@args)
                   (:msgid "LOG0002")
@@ -163,65 +161,73 @@ By default, a symbol passed in for F will be automatically converted into the na
                                     (cl-syslog:get-priority ':err))
                                 "true"
                                 "false")))))
-    (flet ((error-processor (c h &aux reply)
-             (declare (ignore h))
-             ;; this is where error handlers go for errors where we can reply to the client
+    (etypecase reply
+      (|RPCReply|
+       (log-it :info "Requested ~a completed" (|RPCRequest-method| request)))
+      (|RPCError|
+       (log-it :err "Request ~a error: ~a" (|RPCRequest-id| request) (|RPCError-error| reply))))))
+
+
+(defvar *warnings*)
+(setf (documentation '*warnings* 'variable)
+      "An adjustable array of |RPCWarning|s that correspond to WARNINGs signaled during the dynamic extent of %PROCESS-RAW-REQUEST.
+
+These warnings are included in the RPC response that is returned to the caller.
+
+*WARNINGS* is unbound in the global environment.")
+
+(defun %process-request (request dispatch-table timeout debug)
+  "Process the given |RPCRequest| REQUEST and return either an |RPCReply| or an |RPCError|."
+  (flet ((error-processor (c h)
+           (declare (ignore h))
+           ;; this is where error handlers go for errors where we can reply to the client
+           (return-from %process-request
              (typecase c
                (unknown-rpc-method
-                (log-completion-message :err "Request ~a error: method ~a unknown"
-                                        (|RPCRequest-id| request)
-                                        (|RPCRequest-method| request))
-                (setf reply (make-instance '|RPCError|
-                                           :|id| (|RPCRequest-id| request)
-                                           :|error| (format nil "Method named \"~a\" is unknown."
-                                                            (|RPCRequest-method| request))
-                                           :|warnings| *warnings*)))
+                (make-instance '|RPCError|
+                               :|id| (|RPCRequest-id| request)
+                               :|error| (format nil "Method named \"~a\" is unknown."
+                                                (|RPCRequest-method| request))
+                               :|warnings| *warnings*))
                (bt:timeout
-                (log-completion-message :err "Request ~a error: timed out"
-                                        (|RPCRequest-id| request))
-                (setf reply (make-instance '|RPCError|
-                                           :|id| (|RPCRequest-id| request)
-                                           :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
-                                           :|warnings| *warnings*)))
+                (make-instance '|RPCError|
+                               :|id| (|RPCRequest-id| request)
+                               :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
+                               :|warnings| *warnings*))
                (otherwise
-                (log-completion-message :err
-                                        "Request ~a error: Unhandled error in host program:~%~a"
-                                        (|RPCRequest-id| request)
-                                        c)
-                (setf reply (make-instance '|RPCError|
-                                           :|id| (|RPCRequest-id| request)
-                                           :|error| (princ-to-string c)
-                                           :|warnings| *warnings*))))
-             (return-from %process-request reply)))
-      (let ((#+sbcl sb-ext:*invoke-debugger-hook*
-             #-sbcl *debugger-hook* #'error-processor)
-            (kwargs-as-plist
-              (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
-                      :using (hash-value val)
-                    :unless (string= "*args" key)
-                      :append (list (str->lisp-keyword key) val)))
-            (args-as-list (gethash "*args" (|RPCRequest-params| request)))
-            (f (gethash (|RPCRequest-method| request) dispatch-table)))
-        (unless f
-          (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
-        (flet ((apply-handler ()
-                 (handler-bind
-                     ((error (lambda (c)
-                               (when debug
-                                 (finish-output *error-output*)
-                                 (trivial-backtrace:print-backtrace c :output *error-output*)))))
-                   (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
-          (let ((result (if timeout
-                            (bt:with-timeout (timeout)
-                              (apply-handler))
-                            (apply-handler))))
-            (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request))
-            (make-instance '|RPCReply|
-                           :|id| (|RPCRequest-id| request)
-                           :|result| result
-                           :|warnings| *warnings*)))))))
+                (make-instance '|RPCError|
+                               :|id| (|RPCRequest-id| request)
+                               :|error| (format nil "Unhandled error in host program:~%~a" c)
+                               :|warnings| *warnings*))))))
+    (let ((#+sbcl sb-ext:*invoke-debugger-hook*
+           #-sbcl *debugger-hook* #'error-processor)
+          (kwargs-as-plist
+            (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
+                    :using (hash-value val)
+                  :unless (string= "*args" key)
+                    :append (list (str->lisp-keyword key) val)))
+          (args-as-list (gethash "*args" (|RPCRequest-params| request)))
+          (f (gethash (|RPCRequest-method| request) dispatch-table)))
+      (unless f
+        (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
+      (flet ((apply-handler ()
+               (handler-bind
+                   ((error (lambda (c)
+                             (when debug
+                               (finish-output *error-output*)
+                               (trivial-backtrace:print-backtrace c :output *error-output*)))))
+                 (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
+        (let ((result (if timeout
+                          (bt:with-timeout (timeout)
+                            (apply-handler))
+                          (apply-handler))))
+          (make-instance '|RPCReply|
+                         :|id| (|RPCRequest-id| request)
+                         :|result| result
+                         :|warnings| *warnings*))))))
 
 (defun %process-raw-request (receiver dispatch-table logger timeout debug)
+  "Read a raw request from RECEIVER, then handle it and write the result."
   (let ((*warnings* (make-array 0 :adjustable t :fill-pointer 0))
         request start-time identity empty-frame raw-request)
     (handler-bind
@@ -246,7 +252,8 @@ By default, a symbol passed in for F will be automatically converted into the na
                             (|RPCRequest-id| request)
                             (|RPCRequest-method| request))
 
-      (let ((reply (%process-request request start-time dispatch-table logger timeout debug)))
+      (let ((reply (%process-request request dispatch-table timeout debug)))
+        (log-completion-message logger request reply start-time)
         (handler-case
             (%push-raw-request receiver identity empty-frame (serialize reply))
           (error (c)
@@ -260,9 +267,9 @@ By default, a symbol passed in for F will be automatically converted into the na
                                     timeout
                                     debug
                                     pool-address)
-  "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGING-STREAM.
+  "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGER.
 
-DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signalling no timeout."
+DISPATCH-TABLE and LOGGER are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signaling no timeout."
   (pzmq:with-socket receiver :dealer
     (pzmq:connect receiver pool-address)
     (loop (%process-raw-request receiver dispatch-table logger timeout debug))))
@@ -281,7 +288,7 @@ Argument descriptions:
  * DISPATCH-TABLE, of type DISPATCH-TABLE, registers the valid methods to which the server will respond.
  * LISTEN-ADDRESSES is a list of strings, each of which is a valid ZMQ interface address that the server will listen on.
  * THREAD-COUNT is a positive integer of the number of worker threads that the server will spawn to service requests.
- * LOGGING-STREAM is the stream to which the worker threads will write debug information.  This stream is also forwarded to the RPC functions as *DEBUG-IO*.
+ * LOGGER is the stream to which the worker threads will write debug information.  This stream is also forwarded to the RPC functions as *DEBUG-IO*.
  * TIMEOUT, of type (OR NULL (REAL 0)), sets the maximum duration that a thread will be allowed to work for before it is forcefully terminated.  A TIMEOUT value of NIL signals that no thread will ever be terminated for taking too long."
   (check-type dispatch-table dispatch-table)
   (check-type logger cl-syslog:rfc5424-logger)
