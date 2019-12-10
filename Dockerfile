@@ -1,4 +1,4 @@
-FROM rigetti/lisp:2019-07-11
+FROM rigetti/lisp:2019-11-30
 
 # install build dependencies
 COPY Makefile /src/rpcq/Makefile
