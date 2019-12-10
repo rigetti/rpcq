@@ -147,6 +147,114 @@ By default, a symbol passed in for F will be automatically converted into the na
   |error|)
 
 
+(defvar *warnings*)
+
+(defun %process-request (receiver dispatch-table logger timeout debug)
+  (let ((*warnings* (make-array 0 :adjustable t :fill-pointer 0))
+        request result reply start-time identity empty-frame raw-request)
+    (handler-bind
+        ((warning (lambda (c) (vector-push-extend
+                               (make-instance '|RPCWarning|
+                                              :|body| (princ-to-string c)
+                                              :|kind| (princ-to-string (type-of c)))
+                               *warnings*))))
+      (handler-bind
+          ((error (lambda (c)
+                    ;; we can't even reply to the client. log the error and return.
+                    (cl-syslog:format-log logger ':err "Threw generic error before RPC call:~%~a" c)
+                    (return-from %process-request))))
+        (setf (values identity empty-frame raw-request) (%pull-raw-request receiver)
+              start-time (get-internal-real-time)
+              request (deserialize raw-request))
+        (unless (typep request '|RPCRequest|)
+          (error 'not-an-rpcrequest :object request)))
+
+      (cl-syslog:format-log logger ':info
+                            "Request ~a received for ~a"
+                            (|RPCRequest-id| request)
+                            (|RPCRequest-method| request))
+
+      (macrolet ((log-completion-message (priority control &rest args)
+                   `(cl-syslog:rfc-log
+                     (logger ,priority ,control ,@args)
+                     (:msgid "LOG0002")
+                     (|rigetti@0000|
+                      |methodName| (|RPCRequest-method| request)
+                      |requestID| (|RPCRequest-id| request)
+                      |wallTime| (format nil "~f" (/ (- (get-internal-real-time) start-time)
+                                                     internal-time-units-per-second))
+                      |error| ,(if (<= (cl-syslog:get-priority priority)
+                                       (cl-syslog:get-priority ':err))
+                                   "true"
+                                   "false")))))
+        (tagbody
+           (flet ((error-processor (c h)
+                    (declare (ignore h))
+                    ;; this is where error handlers go for errors where we can reply to the client
+                    (typecase c
+                      (unknown-rpc-method
+                       (log-completion-message :err "Request ~a error: method ~a unknown"
+                                               (|RPCRequest-id| request)
+                                               (|RPCRequest-method| request))
+                       (setf reply (make-instance '|RPCError|
+                                                  :|id| (|RPCRequest-id| request)
+                                                  :|error| (format nil "Method named \"~a\" is unknown."
+                                                                   (|RPCRequest-method| request))
+                                                  :|warnings| *warnings*)))
+                      (bt:timeout
+                       (log-completion-message :err "Request ~a error: timed out"
+                                               (|RPCRequest-id| request))
+                       (setf reply (make-instance '|RPCError|
+                                                  :|id| (|RPCRequest-id| request)
+                                                  :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
+                                                  :|warnings| *warnings*)))
+                      (otherwise
+                       (log-completion-message :err
+                                               "Request ~a error: Unhandled error in host program:~%~a"
+                                               (|RPCRequest-id| request)
+                                               c)
+                       (setf reply (make-instance '|RPCError|
+                                                  :|id| (|RPCRequest-id| request)
+                                                  :|error| (princ-to-string c)
+                                                  :|warnings| *warnings*))))
+                    (go :skip-to-send)))
+             (let ((#+sbcl sb-ext:*invoke-debugger-hook*
+                    #-sbcl *debugger-hook* #'error-processor)
+                   (kwargs-as-plist
+                     (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
+                             :using (hash-value val)
+                           :unless (string= "*args" key)
+                             :append (list (str->lisp-keyword key) val)))
+                   (args-as-list (gethash "*args" (|RPCRequest-params| request)))
+                   (f (gethash (|RPCRequest-method| request) dispatch-table)))
+               (unless f
+                 (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
+               (flet ((apply-handler ()
+                        (handler-bind
+                            ((error (lambda (c)
+                                      (when debug
+                                        (finish-output *error-output*)
+                                        (trivial-backtrace:print-backtrace c :output *error-output*)))))
+                          (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
+                 (setf result
+                       (if timeout
+                           (bt:with-timeout (timeout)
+                             (apply-handler))
+                           (apply-handler))))
+               (setf reply (make-instance '|RPCReply|
+                                          :|id| (|RPCRequest-id| request)
+                                          :|result| result
+                                          :|warnings| *warnings*))
+               (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request))))
+         :skip-to-send
+           ;; send the client response, whether success or failure
+           (handler-case
+               (%push-raw-request receiver identity empty-frame (serialize reply))
+             (error (c)
+               (cl-syslog:format-log logger ':err
+                                     "Threw generic error after RPC call, during reply encoding:~%~a" c))))))))
+
+
 (defun %rpc-server-thread-worker (&key
                                     dispatch-table
                                     logger
@@ -158,112 +266,7 @@ By default, a symbol passed in for F will be automatically converted into the na
 DISPATCH-TABLE and LOGGING-STREAM are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signalling no timeout."
   (pzmq:with-socket receiver :dealer
     (pzmq:connect receiver pool-address)
-    (loop
-       (tagbody
-          :start
-          (let ((warnings (make-array 0 :adjustable t :fill-pointer 0))
-                request result reply start-time identity empty-frame raw-request)
-            (handler-bind
-                ((warning (lambda (c) (vector-push-extend
-                                       (make-instance '|RPCWarning|
-                                                      :|body| (princ-to-string c)
-                                                      :|kind| (princ-to-string (type-of c)))
-                                       warnings))))
-              (handler-bind
-                  ((error (lambda (c)
-                            ;; we can't even reply to the client. log the error and restart the loop.
-                            (cl-syslog:format-log logger ':err "Threw generic error before RPC call:~%~a" c)
-                            (go :start))))
-                (setf (values identity empty-frame raw-request) (%pull-raw-request receiver)
-                      start-time (get-internal-real-time)
-                      request (deserialize raw-request))
-                (unless (typep request '|RPCRequest|)
-                  (error 'not-an-rpcrequest :object request)))
-
-              (cl-syslog:format-log logger ':info
-                                    "Request ~a received for ~a"
-                                    (|RPCRequest-id| request)
-                                    (|RPCRequest-method| request))
-
-              (macrolet ((log-completion-message (priority control &rest args)
-                           `(cl-syslog:rfc-log
-                                (logger ,priority ,control ,@args)
-                              (:msgid "LOG0002")
-                              (|rigetti@0000|
-                               |methodName| (|RPCRequest-method| request)
-                               |requestID| (|RPCRequest-id| request)
-                               |wallTime| (format nil "~f" (/ (- (get-internal-real-time) start-time)
-                                                              internal-time-units-per-second))
-                               |error| ,(if (<= (cl-syslog:get-priority priority)
-                                                (cl-syslog:get-priority ':err))
-                                            "true"
-                                            "false")))))
-                (tagbody
-                   (flet ((error-processor (c h)
-                            (declare (ignore h))
-                            ;; this is where error handlers go for errors where we can reply to the client
-                            (typecase c
-                              (unknown-rpc-method
-                               (log-completion-message :err "Request ~a error: method ~a unknown"
-                                                       (|RPCRequest-id| request)
-                                                       (|RPCRequest-method| request))
-                               (setf reply (make-instance '|RPCError|
-                                                          :|id| (|RPCRequest-id| request)
-                                                          :|error| (format nil "Method named \"~a\" is unknown."
-                                                                           (|RPCRequest-method| request))
-                                                          :|warnings| warnings)))
-                              (bt:timeout
-                               (log-completion-message :err "Request ~a error: timed out"
-                                                       (|RPCRequest-id| request))
-                               (setf reply (make-instance '|RPCError|
-                                                          :|id| (|RPCRequest-id| request)
-                                                          :|error| (format nil "Execution timed out.  Note: time limit: ~a seconds." timeout)
-                                                          :|warnings| warnings)))
-                              (otherwise
-                               (log-completion-message :err
-                                                       "Request ~a error: Unhandled error in host program:~%~a"
-                                                       (|RPCRequest-id| request)
-                                                       c)
-                               (setf reply (make-instance '|RPCError|
-                                                          :|id| (|RPCRequest-id| request)
-                                                          :|error| (princ-to-string c)
-                                                          :|warnings| warnings))))
-                            (go :skip-to-send)))
-                     (let ((#+sbcl sb-ext:*invoke-debugger-hook*
-                            #-sbcl *debugger-hook* #'error-processor)
-                           (kwargs-as-plist
-                             (loop :for key :being :the :hash-keys :of (|RPCRequest-params| request)
-                                     :using (hash-value val)
-                                   :unless (string= "*args" key)
-                                     :append (list (str->lisp-keyword key) val)))
-                           (args-as-list (gethash "*args" (|RPCRequest-params| request)))
-                           (f (gethash (|RPCRequest-method| request) dispatch-table)))
-                       (unless f
-                         (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
-                       (flet ((apply-handler ()
-                                (handler-bind
-                                    ((error (lambda (c)
-                                              (when debug
-                                                (finish-output *error-output*)
-                                                (trivial-backtrace:print-backtrace c :output *error-output*)))))
-                                  (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
-                         (setf result
-                               (if timeout
-                                   (bt:with-timeout (timeout)
-                                     (apply-handler))
-                                   (apply-handler))))
-                       (setf reply (make-instance '|RPCReply|
-                                                  :|id| (|RPCRequest-id| request)
-                                                  :|result| result
-                                                  :|warnings| warnings))
-                       (log-completion-message :info "Requested ~a completed" (|RPCRequest-method| request))))
-                 :skip-to-send
-                   ;; send the client response, whether success or failure
-                   (handler-case
-                       (%push-raw-request receiver identity empty-frame (serialize reply))
-                     (error (c)
-                       (cl-syslog:format-log logger ':err
-                                             "Threw generic error after RPC call, during reply encoding:~%~a" c)))))))))))
+    (loop (%process-request receiver dispatch-table logger timeout debug))))
 
 (defun start-server (&key
                        dispatch-table
