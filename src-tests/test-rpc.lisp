@@ -244,7 +244,7 @@
                                             (princ-to-string (uuid:make-v4-uuid))
                                             ;; Bind MESSAGEPACK:*EXTENDED-TYPES* here, which allows
                                             ;; us to serialize the extended type. Since the bindings
-                                            ;; aren't in affect for the rpc server, this will result
+                                            ;; aren't in effect for the rpc server, this will result
                                             ;; in an error when messagepack attempts to deserialize
                                             ;; the unknown extended type.
                                             (let ((messagepack:*extended-types*
