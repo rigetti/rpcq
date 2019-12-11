@@ -22,30 +22,34 @@
 ;;; contains tools for manipulating and (de-)serializing messages
 ;;; that are passed around the Rigetti core stack.
 
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; use the name of the file to scope the messages
-  (defun current-namespace ()
-    (cond
-      ((not (null *load-truename*))
-       (pathname-name *load-truename*))
-      ((not (null *compile-file-truename*))
-       (pathname-name *compile-file-truename*))
-      ((boundp '*mocked-namespace*)
-       (check-type *mocked-namespace* string)
-       *mocked-namespace*)
-      (t
-       (cerror "Just use the \"messages\" namespace."
-               "Couldn't determine a valid namespace.")
-       "messages")))
-  (declaim (special *mocked-namespace*)))
-
 ;; store all messages defined thus far in their namespace
 (defvar *messages* (make-hash-table :test 'equal))
 
 ;; Wrapper for messagepack's treatment of false/nil.
 (defvar *use-false* t
   "Discriminate between a false value and a nil value. If set to NIL both :FALSE and NIL with serialize and deserialize into NIL.")
+
+(defvar *mocked-namespace*)
+(setf (documentation '*mocked-namespace* 'variable)
+      "*MOCKED-NAMESPACE* can be bound to a STRING to override the namespace returned by CURRENT-NAMESPACE.
+
+Potentially useful in testing situations to override the default namespace. Should remain unbound in the global environment.")
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; use the name of the file to scope the messages
+  (defun current-namespace ()
+    (cond
+      ((boundp '*mocked-namespace*)
+       (check-type *mocked-namespace* string)
+       *mocked-namespace*)
+      ((not (null *load-truename*))
+       (pathname-name *load-truename*))
+      ((not (null *compile-file-truename*))
+       (pathname-name *compile-file-truename*))
+      (t
+       (cerror "Just use the \"messages\" namespace."
+               "Couldn't determine a valid namespace.")
+       "messages"))))
 
 (defun register-message (namespace entry)
   "Add ENTRY to *MESSAGES* under NAMESPACE.
