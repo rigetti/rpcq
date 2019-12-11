@@ -209,12 +209,10 @@
            (rpcq:with-rpc-client (client addr :timeout 1)
              (signals bt:timeout
                (rpcq::%rpc-call-raw-request client
-                                            "test-method"
                                             (princ-to-string (uuid:make-v4-uuid))
                                             ;; not a valid |RPCRequest|
                                             (make-array 8 :element-type '(unsigned-byte 8)
-                                                          :initial-element 0)
-                                            '())
+                                                          :initial-element 0))
                (is (search "Threw generic error before RPC call"
                            (get-output-stream-string log-stream)))))
         ;; kill the server thread
@@ -243,7 +241,6 @@
            (rpcq:with-rpc-client (client addr :timeout 1)
              (signals bt:timeout
                (rpcq::%rpc-call-raw-request client
-                                            "test-method"
                                             (princ-to-string (uuid:make-v4-uuid))
                                             ;; Bind MESSAGEPACK:*EXTENDED-TYPES* here, which allows
                                             ;; us to serialize the extended type. Since the bindings
@@ -253,8 +250,7 @@
                                             (let ((messagepack:*extended-types*
                                                     (messagepack:define-extension-types
                                                         '(0 deserialize-bomb))))
-                                              (rpcq::serialize (make-instance 'deserialize-bomb :id 9)))
-                                            '()))
+                                              (rpcq::serialize (make-instance 'deserialize-bomb :id 9)))))
              (is (search "Threw generic error before RPC call"
                          (get-output-stream-string log-stream))))
         ;; kill the server thread

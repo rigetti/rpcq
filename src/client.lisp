@@ -87,7 +87,7 @@
       (process-args args '())
       **kwargs)))
 
-(defun %rpc-call-raw-request (client call uuid payload args)
+(defun %rpc-call-raw-request (client uuid payload)
   "An unsafe version of RPC-CALL that does not verify that PAYLOAD is valid RPCRequest payload.
 
 Useful for testing behavior when sending an invalid RPC request.
@@ -162,7 +162,7 @@ Returns the result of the RPC method call.
                                  :|params| (prepare-rpc-call-args args)
                                  :|method| (sanitize-name call)))
          (payload (serialize request)))
-    (%rpc-call-raw-request client call uuid payload args)))
+    (%rpc-call-raw-request client uuid payload)))
 
 
 (defmacro with-rpc-client ((client endpoint &rest options) &body body)
