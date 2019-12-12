@@ -40,4 +40,5 @@
            #:rpc-protocol-error
            #:rpc-protocol-error-id
            #:rpc-protocol-error-object
-           ))
+           )
+  (:shadow #:phase #:stream #:time #:type #:length #:method #:error #:sequence))

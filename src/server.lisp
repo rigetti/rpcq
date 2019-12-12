@@ -110,18 +110,18 @@ By default, a symbol passed in for F will be automatically converted into the na
 * NULL-FRAME?: boolean indicating whether the recipient expects an additional null frame after the identity frame. Copy this from the matching %PULL-RAW-REQUEST.
 * PAYLOAD:     array of (UNSIGNED-BYTE 8) that houses the raw reply."
   ;; transmit messages
-  (cffi:with-foreign-objects ((foreign-identity ':uint8 (length identity))
-                              (foreign-payload ':uint8 (length payload)))
-    (dotimes (j (length identity))
+  (cffi:with-foreign-objects ((foreign-identity ':uint8 (cl:length identity))
+                              (foreign-payload ':uint8 (cl:length payload)))
+    (dotimes (j (cl:length identity))
       (setf (cffi:mem-aref foreign-identity ':uint8 j)
             (aref identity j)))
-    (dotimes (j (length payload))
+    (dotimes (j (cl:length payload))
       (setf (cffi:mem-aref foreign-payload ':uint8 j)
             (aref payload j)))
-    (pzmq:send socket foreign-identity :len (length identity) :sndmore t)
+    (pzmq:send socket foreign-identity :len (cl:length identity) :sndmore t)
     (when null-frame?
       (pzmq:send socket "" :len 0 :sndmore t))
-    (pzmq:send socket foreign-payload :len (length payload) :sndmore nil))
+    (pzmq:send socket foreign-payload :len (cl:length payload) :sndmore nil))
   nil)
 
 
@@ -209,13 +209,13 @@ These warnings are included in the RPC response that is returned to the caller.
           (args-as-list (gethash "*args" (|RPCRequest-params| request)))
           (f (gethash (|RPCRequest-method| request) dispatch-table)))
       (unless f
-        (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
+        (cl:error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
       (flet ((apply-handler ()
                (handler-bind
-                   ((error (lambda (c)
-                             (when debug
-                               (finish-output *error-output*)
-                               (trivial-backtrace:print-backtrace c :output *error-output*)))))
+                   ((cl:error (lambda (c)
+                                (when debug
+                                  (finish-output *error-output*)
+                                  (trivial-backtrace:print-backtrace c :output *error-output*)))))
                  (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
         (let ((result (if timeout
                           (bt:with-timeout (timeout)
@@ -237,15 +237,15 @@ These warnings are included in the RPC response that is returned to the caller.
                                               :|kind| (princ-to-string (type-of c)))
                                *warnings*))))
       (handler-bind
-          ((error (lambda (c)
-                    ;; we can't even reply to the client. log the error and return.
-                    (cl-syslog:format-log logger ':err "Threw generic error before RPC call:~%~a" c)
-                    (return-from %process-raw-request))))
+          ((cl:error (lambda (c)
+                       ;; we can't even reply to the client. log the error and return.
+                       (cl-syslog:format-log logger ':err "Threw generic error before RPC call:~%~a" c)
+                       (return-from %process-raw-request))))
         (setf (values identity empty-frame raw-request) (%pull-raw-request receiver)
               start-time (get-internal-real-time)
               request (deserialize raw-request))
         (unless (typep request '|RPCRequest|)
-          (error 'not-an-rpcrequest :object request)))
+          (cl:error 'not-an-rpcrequest :object request)))
 
       (cl-syslog:format-log logger ':info
                             "Request ~a received for ~a"
@@ -256,7 +256,7 @@ These warnings are included in the RPC response that is returned to the caller.
         (log-completion-message logger request reply start-time)
         (handler-case
             (%push-raw-request receiver identity empty-frame (serialize reply))
-          (error (c)
+          (cl:error (c)
             (cl-syslog:format-log logger ':err
                                   "Threw generic error after RPC call, during reply encoding:~%~a" c)))))))
 

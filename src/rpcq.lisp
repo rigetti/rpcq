@@ -59,7 +59,7 @@ PARAMETERS:
   * ENTRY - a list of the form (CLASS-NAME PARENT-CLASS-NAME FIELD-SPECS DOCUMENTATION)"
   (check-type namespace string)
   (check-type entry alexandria:proper-list)
-  (assert (= 4 (length entry)))
+  (assert (= 4 (cl:length entry)))
   (let ((messages (gethash namespace *messages*)))
     (setf (gethash namespace *messages*)
           ;; Cons ENTRY onto the tail of the list rather than PUSHing onto the head to ensure the
@@ -97,7 +97,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
   (let ((messagepack:*encode-alist-as-map* nil)
         (messagepack::*use-false* *use-false*))
     (etypecase stream
-      (stream
+      (cl:stream
        (messagepack:encode-stream (%serialize obj) stream))
       (null
        (messagepack:encode (%serialize obj))))))
@@ -116,7 +116,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
     ((alexandria:proper-list-p payload)
      (map 'vector #'%serialize payload))
     (t
-     (error "Can only serialize proper lists, not raw conses. Got ~S" payload))))
+     (cl:error "Can only serialize proper lists, not raw conses. Got ~S" payload))))
 
 (defmethod %serialize ((payload string))
   payload)
@@ -161,7 +161,7 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
     (etypecase payload
       (vector
        (%deserialize (messagepack:decode payload)))
-      (stream
+      (cl:stream
        (%deserialize (messagepack:decode-stream payload))))))
 
 (defun slot-type-and-initform (field-type required default)
@@ -256,7 +256,7 @@ We distinguish between the following options for any field type:
            (values 'hash-table initform)
            (values '(or null hash-table) initform))))
     (t
-     (error "Unrecognized field-type ~A" field-type))))
+     (cl:error "Unrecognized field-type ~A" field-type))))
 
 
 (defun map-plist (f plist)
@@ -295,11 +295,16 @@ LIMITATIONS:
   (check-type class-name symbol)
   (assert (or (null parent-name)
               (and (typep parent-name 'cons)
-                   (= 1 (length parent-name)))))
+                   (= 1 (cl:length parent-name)))))
   (labels ((accessor (slot-name)
              (alexandria:symbolicate (symbol-name class-name)
                                      "-"
                                      (symbol-name slot-name)))
+
+           (friendly-accessor (slot-name)
+             (intern (string-upcase
+                      (substitute #\- #\_ (symbol-name slot-name)))))
+
            (make-slot-spec (field-spec)
              (let*
                  ((slot-name (car field-spec))
@@ -337,6 +342,7 @@ LIMITATIONS:
                        `(:initarg ,(intern (symbol-name deprecated-by) :keyword)))
 
                    :accessor ,(accessor slot-name)
+                   :accessor ,(friendly-accessor slot-name)
                    :type ,slot-type
 
                    ;; only add documentation if present
@@ -374,7 +380,11 @@ LIMITATIONS:
                  (list `(defmethod ,(accessor slot-name) ((obj ,class-name))
                           (warn ,(format nil "~a has been deprecated by ~a."
                                          slot-keyword deprecated-by-keyword))
-                          (,(accessor deprecated-by) obj))))))
+                          (,(accessor deprecated-by) obj))
+                       `(defmethod ,(friendly-accessor slot-name) ((obj ,class-name))
+                          (warn ,(format nil "~a has been deprecated by ~a."
+                                         slot-keyword deprecated-by-keyword))
+                          (,(friendly-accessor deprecated-by) obj))))))
            (init-spec (json)
              (lambda (slot-name)
                `( ,(intern (symbol-name slot-name) :keyword)

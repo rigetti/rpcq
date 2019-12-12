@@ -100,11 +100,11 @@ Useful for testing behavior when sending an invalid RPC request.
 Returns the result of the RPC method call.
 "
   (let ((socket (rpc-client-socket client)))
-    (cffi:with-foreign-object (foreign-payload :uint8 (length payload))
-      (dotimes (j (length payload))
+    (cffi:with-foreign-object (foreign-payload :uint8 (cl:length payload))
+      (dotimes (j (cl:length payload))
         (setf (cffi:mem-aref foreign-payload ':uint8 j)
               (aref payload j)))
-      (pzmq:send socket foreign-payload :len (length payload)))
+      (pzmq:send socket foreign-payload :len (cl:length payload)))
     ;; NOTE: Here lies a tail-recursive loop that waits for a reply.
     ;;       Lisp users working in an implementation that doesn't handle
     ;;       tail-recursion well should beware that receiving a bunch of bad
@@ -123,9 +123,9 @@ Returns the result of the RPC method call.
                          :do (warn "Warning during RPC call: ~a: ~a"
                                    (|RPCWarning-kind| rpc-warning)
                                    (|RPCWarning-body| rpc-warning)))
-                   (error 'rpc-error
-                          :string (|RPCError-error| unpacked-reply)
-                          :id (|RPCError-id| unpacked-reply)))
+                   (cl:error 'rpc-error
+                             :string (|RPCError-error| unpacked-reply)
+                             :id (|RPCError-id| unpacked-reply)))
                   (t
                    (warn "Discarding RPC error with ID ~a, which doesn't match ours of ~a."
                          (|RPCError-id| unpacked-reply) uuid)
@@ -143,9 +143,9 @@ Returns the result of the RPC method call.
                          (|RPCReply-id| unpacked-reply) uuid)
                    (loop-til-reply))))
                (otherwise
-                (error 'rpc-protocol-error
-                       :id uuid
-                       :object unpacked-reply))))))
+                (cl:error 'rpc-protocol-error
+                          :id uuid
+                          :object unpacked-reply))))))
       (cond
         ((rpc-client-timeout client)
          (let ((timeout (rpc-client-timeout client)))
