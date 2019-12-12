@@ -222,6 +222,10 @@
         #-ccl
         (bt:destroy-thread server-thread)))))
 
+(defclass deserialize-bomb (messagepack:extension-type)
+  ()
+  (:documentation "Your guess is as good as mi.. *BOOM*"))
+
 (deftest test-server-deserialize-error ()
   "Test that deserialization errors are handled correctly."
   (with-unique-rpc-address (addr)
@@ -250,7 +254,7 @@
                                             (let ((messagepack:*extended-types*
                                                     (messagepack:define-extension-types
                                                         '(0 deserialize-bomb))))
-                                              (rpcq::serialize (make-instance 'deserialize-bomb :id 9)))))
+                                              (rpcq::serialize (make-instance 'deserialize-bomb 'messagepack::id 9)))))
              (is (search "Threw generic error before RPC call"
                          (get-output-stream-string log-stream))))
         ;; kill the server thread
@@ -289,8 +293,9 @@
            (rpcq:with-rpc-client (client addr)
              (signals rpcq::rpc-error
                (rpcq:rpc-call client "test-error-method"))
-             (is (search "Unhandled error in host program" (get-output-stream-string log-stream)))
-             (is (search "OOF-FIND-ME-ON-THE-STACK" (get-output-stream-string error-stream))))
+             (let ((log-string (get-output-stream-string log-stream)))
+               (is (search "Unhandled error in host program" log-string))
+               (is (search "oof!" log-string))))
         ;; kill the server thread
         #+ccl
         (loop :while (bt:thread-alive-p server-thread)
