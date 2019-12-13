@@ -272,35 +272,6 @@ We distinguish between the following options for any field type:
                plist)
     tbl))
 
-
-(defun snake-to-kebab (string)
-  "Convert STRING from snake_case to KEBAB-CASE. Yum!"
-  (string-upcase (substitute #\- #\_ string)))
-
-(defun camel-to-kebab (string)
-  "Convert STRING from CamelCase to KEBAB-CASE. Yum!"
-  (let ((raw-segments (cl-ppcre:all-matches-as-strings "(^[a-z]|[A-Z0-9])[a-z]*"
-                                                       string))
-        (running-singletons nil)
-        (kebab-segments nil))
-    (loop :for seg :in raw-segments
-          :if (= 1 (length seg))
-            :do (push seg running-singletons)
-          :else
-            :do (progn
-                  (when running-singletons
-                    (push (apply #'concatenate 'string
-                                 (nreverse running-singletons))
-                          kebab-segments)
-                    (setf running-singletons nil))
-                  (push seg kebab-segments))
-          :finally (when running-singletons
-                     (push (apply #'concatenate 'string
-                                  (nreverse running-singletons))
-                           kebab-segments)))
-
-    (format nil "~{~:@(~A~)~^-~}" (nreverse kebab-segments))))
-
 (defmacro defmessage (class-name parent-name field-specs &key (documentation nil))
   "Create a (de-)serializable message definition.
 
