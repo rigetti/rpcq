@@ -22,6 +22,7 @@
   :depends-on (#:alexandria             ; Utilities
                #:parse-float            ; Float parsing
                #:yason                  ; JSON generation
+               #:cl-ppcre               ; Name mangling
                ;; RPC requirements
                #:pzmq                   ; communication layer
                #:cl-messagepack         ; message packer
