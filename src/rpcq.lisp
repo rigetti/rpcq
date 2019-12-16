@@ -272,7 +272,6 @@ We distinguish between the following options for any field type:
                plist)
     tbl))
 
-
 (defmacro defmessage (class-name parent-name field-specs &key (documentation nil))
   "Create a (de-)serializable message definition.
 
@@ -300,6 +299,12 @@ LIMITATIONS:
              (alexandria:symbolicate (symbol-name class-name)
                                      "-"
                                      (symbol-name slot-name)))
+
+           (friendly-accessor (slot-name)
+             (alexandria:symbolicate (camel-to-kebab (symbol-name class-name))
+                                     "-"
+                                     (snake-to-kebab (symbol-name slot-name))))
+
            (make-slot-spec (field-spec)
              (let*
                  ((slot-name (car field-spec))
@@ -337,6 +342,7 @@ LIMITATIONS:
                        `(:initarg ,(intern (symbol-name deprecated-by) :keyword)))
 
                    :accessor ,(accessor slot-name)
+                   :accessor ,(friendly-accessor slot-name)
                    :type ,slot-type
 
                    ;; only add documentation if present
@@ -374,7 +380,11 @@ LIMITATIONS:
                  (list `(defmethod ,(accessor slot-name) ((obj ,class-name))
                           (warn ,(format nil "~a has been deprecated by ~a."
                                          slot-keyword deprecated-by-keyword))
-                          (,(accessor deprecated-by) obj))))))
+                          (,(accessor deprecated-by) obj))
+                       `(defmethod ,(friendly-accessor slot-name) ((obj ,class-name))
+                          (warn ,(format nil "~a has been deprecated by ~a."
+                                         slot-keyword deprecated-by-keyword))
+                          (,(friendly-accessor deprecated-by) obj))))))
            (init-spec (json)
              (lambda (slot-name)
                `( ,(intern (symbol-name slot-name) :keyword)

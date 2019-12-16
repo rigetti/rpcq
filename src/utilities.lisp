@@ -9,9 +9,37 @@
   "Convert a stringifiable STRING-DESIGNATOR into a snake-case string."
   (substitute #\_ #\- (string-downcase (string string-designator))))
 
+(defun snake-to-kebab (str)
+  "Convert STR from snake_case to KEBAB-CASE. Yum!"
+  (string-upcase (substitute #\- #\_ str)))
+
+(defun camel-to-kebab (str)
+  "Convert STR from CamelCase to KEBAB-CASE. Yum!"
+  (let ((raw-segments (cl-ppcre:all-matches-as-strings "(^[a-z]|[A-Z0-9])[a-z]*"
+                                                       str))
+        (running-singletons nil)
+        (kebab-segments nil))
+    (loop :for seg :in raw-segments
+          :if (= 1 (length seg))
+            :do (push seg running-singletons)
+          :else
+            :do (progn
+                  (when running-singletons
+                    (push (apply #'concatenate 'string
+                                 (nreverse running-singletons))
+                          kebab-segments)
+                    (setf running-singletons nil))
+                  (push seg kebab-segments))
+          :finally (when running-singletons
+                     (push (apply #'concatenate 'string
+                                  (nreverse running-singletons))
+                           kebab-segments)))
+
+    (format nil "~{~:@(~A~)~^-~}" (nreverse kebab-segments))))
+
 (defun str->lisp-keyword (str)
   "Convert a snake-case string into a hyphenated Lisp keyword."
-  (make-keyword (substitute #\- #\_ (string-upcase str))))
+  (make-keyword (snake-to-kebab str)))
 
 (defun format-log (s fmt-string &rest args)
   "Writes a format string to the stream S in debug output format."
