@@ -206,7 +206,7 @@ These warnings are included in the RPC response that is returned to the caller.
                     :using (hash-value val)
                   :unless (string= "*args" key)
                     :append (list (str->lisp-keyword key) val)))
-          (args-as-list (gethash "*args" (|RPCRequest-params| request)))
+          (positional-args (gethash "*args" (|RPCRequest-params| request)))
           (f (gethash (|RPCRequest-method| request) dispatch-table)))
       (unless f
         (error 'unknown-rpc-method :method-name (|RPCRequest-method| request)))
@@ -216,7 +216,7 @@ These warnings are included in the RPC response that is returned to the caller.
                              (when debug
                                (finish-output *error-output*)
                                (trivial-backtrace:print-backtrace c :output *error-output*)))))
-                 (apply f (concatenate 'list args-as-list kwargs-as-plist)))))
+                 (apply f (concatenate 'list positional-args kwargs-as-plist)))))
         (let ((result (if timeout
                           (bt:with-timeout (timeout)
                             (apply-handler))

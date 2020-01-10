@@ -71,10 +71,10 @@
 (deftest test-prepare-rpc-call-args ()
   (loop
     :with testcases :=
-    '((() . ("*args" ()))
-      ((1 2 3 "four") . ("*args" (1 2 3 "four")))
-      ((:only-kw 23 :allowed t) . ("*args" () "only_kw" 23 "allowed" t))
-      (("a1" 42 3.0 :kw1 "k1" :kw-2 "k2") . ("*args" ("a1" 42 3.0) "kw1" "k1" "kw_2" "k2")))
+    '((() . ("*args" #()))
+      ((1 2 3 "four") . ("*args" #(1 2 3 "four")))
+      ((:only-kw 23 :allowed t) . ("*args" #() "only_kw" 23 "allowed" t))
+      (("a1" 42 3.0 :kw1 "k1" :kw-2 "k2") . ("*args" #("a1" 42 3.0) "kw1" "k1" "kw_2" "k2")))
     :for (args . expected-plist) :in testcases :do
       (is (equalp (rpcq::prepare-rpc-call-args args)
                   (alexandria:plist-hash-table expected-plist :test 'equal)))))

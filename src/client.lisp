@@ -70,7 +70,7 @@
         ((process-args (args *args)
            (cond
              ((or (null args) (keywordp (first args)))
-              (setf (gethash "*args" **kwargs) (reverse *args))
+              (setf (gethash "*args" **kwargs) (coerce (reverse *args) 'vector))
               (process-**kwargs args))
              (t
               (process-args (rest args) (cons (first args) *args)))))
