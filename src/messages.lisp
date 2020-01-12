@@ -393,3 +393,17 @@
       :type :string
       :required t))
   :documentation "Program and patch values to send to the QPU for execution.")
+
+(defmessage |QuiltCalibrationsRequest| ()
+  ((|target_device|
+    :documentation "Specifications for the device to get calibrations for."
+    :type |TargetDevice|
+    :required t))
+  :documentation "A request for up-to-date Quilt calibrations.")
+
+(defmessage |QuiltCalibrationsResponse| ()
+  ((|quilt|
+    :documentation "Quilt code with definitions for frames, waveforms, and calibrations."
+    :type :string
+    :required t))
+  :documentation "Up-to-date Quilt calibrations.")
