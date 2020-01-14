@@ -56,7 +56,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+          (bt:destroy-thread server-thread))))))
 
 (deftest test-param-order ()
   (with-unique-rpc-address (addr)
@@ -79,7 +80,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+          (bt:destroy-thread server-thread))))))
 
 (deftest test-client-timeout ()
   (with-unique-rpc-address (addr)
@@ -157,7 +159,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+          (bt:destroy-thread server-thread))))))
 
 (defun error-with-serious-condition ()
   (error 'serious-condition))
@@ -190,7 +193,8 @@
           (loop :while (bt:thread-alive-p server-thread)
                 :do (sleep 1) (bt:destroy-thread server-thread))
           #-ccl
-          (bt:destroy-thread server-thread))))))
+          (when (bt:thread-alive-p server-thread)
+            (bt:destroy-thread server-thread)))))))
 
 (deftest test-invalid-rpc-request ()
   "Test that invalid RPC requests are handled correctly."
@@ -222,7 +226,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+            (bt:destroy-thread server-thread))))))
 
 (deftest test-server-deserialize-error ()
   "Test that deserialization errors are handled correctly."
@@ -260,7 +265,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+            (bt:destroy-thread server-thread))))))
 
 (defun oof-find-me-on-the-stack ()
   (error "oof!"))
@@ -298,4 +304,5 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+            (bt:destroy-thread server-thread))))))
