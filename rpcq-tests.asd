@@ -24,6 +24,7 @@
                #:cl-syslog
                #:uiop
                #:fiasco
+               #:cl-cpus
                )
   :perform (asdf:test-op (o s)
                          (uiop:symbol-call ':rpcq-tests
