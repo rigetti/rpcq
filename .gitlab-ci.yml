@@ -8,7 +8,7 @@ variables:
 test-python:
   stage: test
   tags:
-    - ec2-github
+    - github
   only:
     refs:
       - branches
@@ -21,7 +21,7 @@ test-python:
 test-lisp:
   stage: test
   tags:
-    - ec2-github
+    - github
   only:
     refs:
       - branches
