@@ -4,6 +4,20 @@
 
 (in-package #:rpcq-tests)
 
+;; TODO FIXME XXX The below relies on some funky/hacky/unsightly code
+;; to forcefully kill threads. See open issues
+;; https://github.com/rigetti/rpcq/issues/61
+;; https://github.com/rigetti/rpcq/issues/75
+
+(defun kill-thread-slowly (thread)
+  #+ccl
+  (loop :while (bt:thread-alive-p thread)
+        :do (sleep 1) (bt:destroy-thread thread))
+  #-ccl
+  (when (bt:thread-alive-p thread)
+    (bt:destroy-thread thread))
+  (sleep 1))
+
 (defun make-test-logger (&optional (stream *error-output*))
   (make-instance 'cl-syslog:rfc5424-logger
                  :app-name "rpcq-tests"
@@ -30,11 +44,6 @@
     (sleep sleep))
   "test-response")
 
-;; TODO FIXME XXX The below relies on some funky/hacky/unsightly code
-;; to forcefully kill threads. See open issues
-;; https://github.com/rigetti/rpcq/issues/61
-;; https://github.com/rigetti/rpcq/issues/75
-
 (deftest test-client-server-dialogue ()
   (with-unique-rpc-address (addr)
     (let* ((server-function
@@ -52,11 +61,7 @@
              (let ((server-response (rpcq:rpc-call client "test-method")))
                (is (string= *expected-response* server-response))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (deftest test-param-order ()
   (with-unique-rpc-address (addr)
@@ -75,11 +80,7 @@
              (let ((server-response (rpcq:rpc-call client "list" 1 2 3 :four "fore!")))
                (is (equalp server-response #(1 2 3 "four" "fore!")))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (deftest test-client-timeout ()
   (with-unique-rpc-address (addr)
@@ -98,11 +99,7 @@
              (signals bt:timeout
                (rpcq:rpc-call client "test-method" :sleep 5)))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (deftest test-server-timeout ()
   (with-unique-rpc-address (addr)
@@ -122,11 +119,7 @@
              (signals rpcq::rpc-error
                (rpcq:rpc-call client "test-method" :sleep 5)))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (defun served-method ()
   (warn "The purpose of this test is to communicate a warning.")
@@ -151,11 +144,7 @@
                (is (string= "Some other reply payload."
                             (rpcq:rpc-call client "served-method")))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (defun error-with-serious-condition ()
   (error 'serious-condition))
@@ -184,11 +173,7 @@
                (signals rpc-error
                  (rpcq:rpc-call client rpc-method)))
           ;; kill the server thread
-          #+ccl
-          (loop :while (bt:thread-alive-p server-thread)
-                :do (sleep 1) (bt:destroy-thread server-thread))
-          #-ccl
-          (bt:destroy-thread server-thread))))))
+          (kill-thread-slowly server-thread))))))
 
 (deftest test-invalid-rpc-request ()
   "Test that invalid RPC requests are handled correctly."
@@ -216,11 +201,7 @@
                (is (search "Threw generic error before RPC call"
                            (get-output-stream-string log-stream)))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (deftest test-server-deserialize-error ()
   "Test that deserialization errors are handled correctly."
@@ -254,11 +235,7 @@
              (is (search "Threw generic error before RPC call"
                          (get-output-stream-string log-stream))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
 
 (defun oof-find-me-on-the-stack ()
   (error "oof!"))
@@ -292,8 +269,4 @@
              (is (search "Unhandled error in host program" (get-output-stream-string log-stream)))
              (is (search "OOF-FIND-ME-ON-THE-STACK" (get-output-stream-string error-stream))))
         ;; kill the server thread
-        #+ccl
-        (loop :while (bt:thread-alive-p server-thread)
-              :do (sleep 1) (bt:destroy-thread server-thread))
-        #-ccl
-        (bt:destroy-thread server-thread)))))
+        (kill-thread-slowly server-thread)))))
