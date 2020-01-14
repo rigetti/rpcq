@@ -21,7 +21,6 @@
   "Run all rpcq tests. If VERBOSE is T, print out lots of test info. If HEADLESS is T, disable interactive debugging and quit on completion."
   (setf fiasco::*test-run-standard-output* (make-broadcast-stream *standard-output*))
   (print (cl-cpus:get-number-of-processors))
-  (uiop:quit 1)
   (cond
     ((null headless)
      (run-package-tests :package ':rpcq-tests

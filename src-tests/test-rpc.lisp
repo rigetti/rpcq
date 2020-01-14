@@ -102,7 +102,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+          (bt:destroy-thread server-thread))))))
 
 (deftest test-server-timeout ()
   (with-unique-rpc-address (addr)
@@ -126,7 +127,8 @@
         (loop :while (bt:thread-alive-p server-thread)
               :do (sleep 1) (bt:destroy-thread server-thread))
         #-ccl
-        (bt:destroy-thread server-thread)))))
+        (when (bt:thread-alive-p server-thread)
+          (bt:destroy-thread server-thread))))))
 
 (defun served-method ()
   (warn "The purpose of this test is to communicate a warning.")
