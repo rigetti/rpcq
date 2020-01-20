@@ -317,6 +317,9 @@ class BinaryExecutableResponse(Message):
     program: str
     """Execution settings and sequencer binaries."""
 
+    metadata: Dict[str, Any]
+    """Metadata associated with the translation process."""
+
     memory_descriptors: Dict[str, ParameterSpec] = field(default_factory=dict)
     """Internal field for constructing patch tables."""
 
