@@ -362,7 +362,12 @@
       :documentation "Internal field for reshaping returned buffers."
       :type (:list :any)
       :required nil
-      :default nil))
+      :default nil)
+
+     (|metadata|
+      :documentation "Metadata associated with the translation process."
+      :type (:map :string -> :any)
+      :required t))
   :documentation "Program to run on the QPU.")
 
 (defmessage |PyQuilExecutableResponse| ()
