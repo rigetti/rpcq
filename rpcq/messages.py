@@ -317,8 +317,37 @@ class BinaryExecutableResponse(Message):
     program: str
     """Execution settings and sequencer binaries."""
 
-    metadata: Dict[str, Any]
-    """Metadata associated with the translation process."""
+    memory_descriptors: Dict[str, ParameterSpec] = field(default_factory=dict)
+    """Internal field for constructing patch tables."""
+
+    ro_sources: List[Any] = field(default_factory=list)
+    """Internal field for reshaping returned buffers."""
+
+
+@dataclass(eq=False, repr=False)
+class QuiltBinaryExecutableRequest(Message):
+    """
+    Native Quilt and the information needed to create binary executables.
+    """
+
+    quilt: str
+    """Native Quilt to be translated into an executable program."""
+
+    num_shots: int
+    """The number of times to repeat the program."""
+
+
+@dataclass(eq=False, repr=False)
+class QuiltBinaryExecutableResponse(Message):
+    """
+    Program to run on the QPU.
+    """
+
+    program: str
+    """Execution settings and sequencer binaries."""
+
+    debug: Dict[str, Any]
+    """Debug information associated with the translation process."""
 
     memory_descriptors: Dict[str, ParameterSpec] = field(default_factory=dict)
     """Internal field for constructing patch tables."""
