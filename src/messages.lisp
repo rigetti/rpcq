@@ -362,12 +362,43 @@
       :documentation "Internal field for reshaping returned buffers."
       :type (:list :any)
       :required nil
-      :default nil)
+      :default nil))
+  :documentation "Program to run on the QPU.")
 
-     (|metadata|
-      :documentation "Metadata associated with the translation process."
-      :type (:map :string -> :any)
-      :required t))
+(defmessage |QuiltBinaryExecutableRequest| ()
+  ((|quilt|
+    :documentation "Native Quilt to be translated into an executable program."
+    :type :string
+    :required t)
+
+   (|num_shots|
+    :documentation "The number of times to repeat the program."
+    :type :integer
+    :required t))
+  :documentation "Native Quilt and the information needed to create binary executables.")
+
+(defmessage |QuiltBinaryExecutableResponse| ()
+  ((|program|
+    :documentation "Execution settings and sequencer binaries."
+    :type :string
+    :required t)
+
+   (|memory_descriptors|
+    :documentation "Internal field for constructing patch tables."
+    :type (:map :string -> |ParameterSpec|)
+    :required nil
+    :default nil)
+
+   (|ro_sources|
+    :documentation "Internal field for reshaping returned buffers."
+    :type (:list :any)
+    :required nil
+    :default nil)
+
+   (|debug|
+    :documentation "Debug information associated with the translation process."
+    :type (:map :string -> :any)
+    :required t))
   :documentation "Program to run on the QPU.")
 
 (defmessage |PyQuilExecutableResponse| ()
