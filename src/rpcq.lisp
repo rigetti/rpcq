@@ -164,6 +164,12 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
       (stream
        (%deserialize (messagepack:decode-stream payload))))))
 
+(defun from-yaml-file (filespec)
+  "Read a RPCQ object from the yaml file designated by FILESPEC."
+  (%deserialize
+   (yaml:parse
+    (alexandria:read-file-into-string filespec))))
+
 (defun slot-type-and-initform (field-type required default)
   "Translate a FIELD-TYPE to a Lisp type and initform taking into account
 whether the field is REQUIRED and a specified DEFAULT value.
