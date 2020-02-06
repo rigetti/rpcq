@@ -23,6 +23,7 @@
                #:parse-float            ; Float parsing
                #:yason                  ; JSON generation
                #:cl-ppcre               ; Name mangling
+               #:cl-yaml                ; YAML read/write
                ;; RPC requirements
                #:pzmq                   ; communication layer
                #:cl-messagepack         ; message packer
