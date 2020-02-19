@@ -967,6 +967,34 @@
 
   :documentation "Configuration for a single QRR Channel.")
 
+(defmessage |CWChannel| ()
+    (
+     (|channel_index|
+      :documentation "The zero-indexed channel of the generator's output."
+      :type :integer
+      :required t
+      :default 0)
+
+     (|rf_output_frequency|
+      :documentation "The CW generator's output frequency [Hz]."
+      :type :integer
+      :required nil
+      :default 1000000000)
+
+     (|rf_output_power|
+      :documentation "The power of CW generator's output [dBm]."
+      :type :float
+      :required nil
+      :default 0.0)
+
+     (|rf_output_enabled|
+      :documentation "The state (on/off) of CW generator's output."
+      :type :bool
+      :required nil
+      :default t))
+
+  :documentation "Configuration for a single CW Generator Channel.")
+
 (defmessage |LegacyUSRPSequencer| ()
     (
      (|tx_channel|
