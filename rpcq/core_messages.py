@@ -761,7 +761,7 @@ class CWChannel(Message):
     Configuration for a single CW Generator Channel.
     """
 
-    channel_index: Optional[int] = 0
+    channel_index: int = 0
     """The zero-indexed channel of the generator's output."""
 
     rf_output_frequency: Optional[int] = 1000000000
