@@ -51,7 +51,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=[
-        'msgpack>=0.6',
+        'msgpack>=0.6,<1.0',
         'python-rapidjson',
         'pyzmq>=17',
         'ruamel.yaml',
