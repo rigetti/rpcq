@@ -1,3 +1,8 @@
+# If you change the requirements here, don't forget to make the
+# corresponding change in the conda-forge rcpq-feedstock here:
+#
+# https://github.com/conda-forge/rpcq-feedstock/blob/master/recipe/meta.yaml
+
 msgpack >=0.6,<1.0
 python-rapidjson
 pyzmq>=17
