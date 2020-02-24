@@ -299,7 +299,7 @@ Argument descriptions:
   (let ((pool-address (format nil "inproc://~a" (uuid:make-v4-uuid))))
     (cl-syslog:format-log logger ':info
                           "Spawning server at ~a .~%" listen-addresses)
-    (pzmq:with-sockets ((clients :router :monitor) (workers :dealer :monitor))
+    (pzmq:with-sockets ((clients :router) (workers :dealer))
       (dolist (address listen-addresses)
         (pzmq:bind clients address))
       (pzmq:bind workers pool-address)
