@@ -115,6 +115,9 @@ def client(request, m_endpoints):
     return client
 
 
+OOPS_VALUE_ERROR_STR = "ValueError('Oops.',)\nTraceback (most recent call last):\n  "
+
+
 def test_client_rpcerrorerror(server, client):
     assert client.call('add', 1, 1) == 2
     assert client.call('foo') == 'bar'
@@ -125,7 +128,7 @@ def test_client_rpcerrorerror(server, client):
     except RPCErrorError as e:  # RPCErrorError is deprecated
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
-        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert OOPS_VALUE_ERROR_STR in full_traceback
         assert 'ValueError: Oops.' in full_traceback
 
 
@@ -147,7 +150,7 @@ def test_client(server, client):
     except RPCError as e:
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
-        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert OOPS_VALUE_ERROR_STR in full_traceback
         assert 'ValueError: Oops.' in full_traceback
 
 
@@ -185,7 +188,7 @@ async def test_async_client_rpcerrorerror(server, client):
     except RPCErrorError as e:  # RPCErrorError is deprecated
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
-        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert OOPS_VALUE_ERROR_STR in full_traceback
         assert 'ValueError: Oops.' in full_traceback
 
     assert reply == "bar"
@@ -201,7 +204,7 @@ async def test_async_client(server, client):
     except RPCError as e:
         # Get the full traceback and make sure it gets propagated correctly. Remove line numbers.
         full_traceback = ''.join([i for i in str(e) if not i.isdigit()])
-        assert 'Oops.\nTraceback (most recent call last):\n  ' in full_traceback
+        assert OOPS_VALUE_ERROR_STR in full_traceback
         assert 'ValueError: Oops.' in full_traceback
 
     assert reply == "bar"

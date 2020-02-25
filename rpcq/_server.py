@@ -182,7 +182,7 @@ class Server:
                 except Exception as e:
                     if self.serialize_exceptions:
                         _log.exception('Exception thrown in Server run loop during request '
-                                       'reception: {}'.format(str(e)))
+                                       'reception: {}'.format(repr(e)))
                     else:
                         raise e
                 finally:
@@ -196,7 +196,7 @@ class Server:
                 except Exception as e:
                     if self.serialize_exceptions:
                         _log.exception('Exception thrown in Server run loop during request '
-                                       'dispatch: {}'.format(str(e)))
+                                       'dispatch: {}'.format(repr(e)))
                     else:
                         raise e
 

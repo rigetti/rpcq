@@ -110,7 +110,7 @@ class RPCSpec(object):
             try:
                 rpc_handler = self.get_handler(request)
             except RPCMethodError as e:
-                return rpc_error(request.id, str(e), warnings=warnings)
+                return rpc_error(request.id, repr(e), warnings=warnings)
 
             try:
                 # Run RPC and get result
@@ -125,10 +125,10 @@ class RPCSpec(object):
                     _traceback = traceback.format_exc()
                     _log.error(_traceback)
                     if self.provide_tracebacks:
-                        return rpc_error(request.id, "{}\n{}".format(str(e), _traceback),
+                        return rpc_error(request.id, "{}\n{}".format(repr(e), _traceback),
                                          warnings=warnings)
                     else:
-                        return rpc_error(request.id, str(e), warnings=warnings)
+                        return rpc_error(request.id, repr(e), warnings=warnings)
                 else:
                     raise e
 
