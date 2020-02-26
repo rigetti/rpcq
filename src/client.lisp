@@ -31,6 +31,12 @@
 
 (in-package #:rpcq)
 
+(defstruct client-auth-config
+  "Holds the ZeroMQ Curve configuration for a client socket."
+  (client-secret-key nil :type (or null string))
+  (client-public-key nil :type (or null string))
+  (server-public-key nil :type (or null string)))
+
 (defstruct rpc-client
   "Holds the data for an (active) RPCQ client connection."
   socket
@@ -164,17 +170,23 @@ Returns the result of the RPC method call.
          (payload (serialize request)))
     (%rpc-call-raw-request client uuid payload)))
 
-
 (defmacro with-rpc-client ((client endpoint &rest options) &body body)
   "Opens an RPCQ client connection, referenced by CLIENT, at ENDPOINT.  The connection is automatically closed as this form is exited or unwound.  Hence, CLIENT is only valid during the execution of BODY, and it should not be stored or closed over.
 
 OPTIONS is a p-list with the following possible keys:
 
+  :AUTH-CONFIG is a CLIENT-AUTH-CONFIG specifying keys for socket encryption and authentication.
   :TIMEOUT is a timeout duration in seconds."
   (let ((socket (gensym "SOCKET-"))
+        (auth-config (getf options ':auth-config))
         (timeout (getf options ':timeout)))
-    `(pzmq:with-socket ,socket :dealer
-       (pzmq:connect ,socket ,endpoint)
-       (let ((,client (make-rpc-client :socket ,socket
-                                       :timeout ,timeout)))
-         ,@body))))
+    (alexandria:once-only (auth-config)
+      `(pzmq:with-socket ,socket :dealer
+         (when ,auth-config
+           (pzmq:setsockopt ,socket :curve-secretkey (client-auth-config-client-secret-key ,auth-config))
+           (pzmq:setsockopt ,socket :curve-publickey (client-auth-config-client-public-key ,auth-config))
+           (pzmq:setsockopt ,socket :curve-serverkey (client-auth-config-server-public-key ,auth-config)))
+         (pzmq:connect ,socket ,endpoint)
+         (let ((,client (make-rpc-client :socket ,socket
+                                         :timeout ,timeout)))
+           ,@body)))))

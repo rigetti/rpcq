@@ -25,6 +25,16 @@
            #:from-json
            #:to-json
            #:to-json-string
+           ;; ZMQ Curve client/server auth
+           #:client-auth-config
+           #:client-auth-config-server-public-key
+           #:client-auth-config-client-public-key
+           #:client-auth-config-client-secret-key
+           #:make-client-auth-config
+           #:server-auth-config
+           #:server-auth-config-server-public-key
+           #:server-auth-config-server-secret-key
+           #:make-server-auth-config
            ;; RPC client/server functions
            #:make-dispatch-table
            #:dispatch-table-add-handler

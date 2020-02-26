@@ -47,6 +47,10 @@
 
 (in-package #:rpcq)
 
+(defstruct server-auth-config
+  "Holds the ZeroMQ Curve configuration for a server socket."
+  (server-secret-key nil :type (or null string))
+  (server-public-key nil :type (or null string)))
 
 (deftype dispatch-table ()
   'hash-table)
@@ -276,6 +280,7 @@ DISPATCH-TABLE and LOGGER are both required arguments.  TIMEOUT is of type (OR N
 
 (defun start-server (&key
                        dispatch-table
+                       auth-config
                        (listen-addresses (list "tcp://*:5555"))
                        (thread-count 5)
                        (logger (make-instance 'cl-syslog:rfc5424-logger
@@ -286,6 +291,7 @@ DISPATCH-TABLE and LOGGER are both required arguments.  TIMEOUT is of type (OR N
 
 Argument descriptions:
  * DISPATCH-TABLE, of type DISPATCH-TABLE, registers the valid methods to which the server will respond.
+ * AUTH-CONFIG is the SERVER-AUTH-CONFIG specifying keys for socket encryption.
  * LISTEN-ADDRESSES is a list of strings, each of which is a valid ZMQ interface address that the server will listen on.
  * THREAD-COUNT is a positive integer of the number of worker threads that the server will spawn to service requests.
  * LOGGER is the stream to which the worker threads will write debug information.  This stream is also forwarded to the RPC functions as *DEBUG-IO*.
@@ -297,9 +303,17 @@ Argument descriptions:
   (check-type debug boolean)
   (check-type listen-addresses list)
   (let ((pool-address (format nil "inproc://~a" (uuid:make-v4-uuid))))
-    (cl-syslog:format-log logger ':info
-                          "Spawning server at ~a .~%" listen-addresses)
+    (cl-syslog:format-log logger ':info "Spawning server at ~a .~%" listen-addresses)
     (pzmq:with-sockets ((clients :router) (workers :dealer))
+      ;; Configuring the server secret key here enables encryption on the socket and allows clients
+      ;; to authenticate the server. However, this server is not currently authenticating connected
+      ;; client keys. In order to do, we'd need to implement that authentication ourselves on top of
+      ;; the ZeroMQ Authentication Protocol (ZAP) (unless such support is added to PZMQ).
+      ;;
+      ;; https://rfc.zeromq.org/spec/27/
+      (when auth-config
+        (pzmq:setsockopt clients :curve-server t)
+        (pzmq:setsockopt clients :curve-secretkey (server-auth-config-server-secret-key auth-config)))
       (dolist (address listen-addresses)
         (pzmq:bind clients address))
       (pzmq:bind workers pool-address)
