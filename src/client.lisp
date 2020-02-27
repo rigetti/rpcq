@@ -33,9 +33,9 @@
 
 (defstruct client-auth-config
   "Holds the ZeroMQ Curve configuration for a client socket."
-  (client-secret-key nil :type (or null string))
-  (client-public-key nil :type (or null string))
-  (server-public-key nil :type (or null string)))
+  (client-secret-key (error "Must provide CLIENT-SECRET-KEY") :type string :read-only t)
+  (client-public-key (error "Must provide CLIENT-PUBLIC-KEY") :type string :read-only t)
+  (server-public-key (error "Must provide SERVER-PUBLIC-KEY") :type string :read-only t))
 
 (defstruct rpc-client
   "Holds the data for an (active) RPCQ client connection."

@@ -32,7 +32,6 @@
            #:client-auth-config-client-secret-key
            #:make-client-auth-config
            #:server-auth-config
-           #:server-auth-config-server-public-key
            #:server-auth-config-server-secret-key
            #:make-server-auth-config
            ;; RPC client/server functions
