@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 import signal
+import sys
 import time
 from multiprocessing import Process
 from warnings import warn, catch_warnings
@@ -114,9 +115,11 @@ def client(request, m_endpoints):
     request.addfinalizer(client.close)
     return client
 
-
-OOPS_VALUE_ERROR_STR = "ValueError('Oops.',)\nTraceback (most recent call last):\n  "
-
+if sys.version_info < (3, 7):
+    OOPS_VALUE_ERROR_STR = "ValueError('Oops.',)\nTraceback (most recent call last):\n  "
+else:
+    # The default repr for BaseException was changed in 3.7 to elide the trailing comma.
+    OOPS_VALUE_ERROR_STR = "ValueError('Oops.')\nTraceback (most recent call last):\n  "
 
 def test_client_rpcerrorerror(server, client):
     assert client.call('add', 1, 1) == 2
