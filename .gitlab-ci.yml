@@ -5,7 +5,7 @@ include:
 variables:
   IMAGE: rigetti/rpcq
 
-test-python:
+test-python-36:
   stage: test
   tags:
     - github
@@ -13,6 +13,32 @@ test-python:
     refs:
       - branches
   image: python:3.6
+  script:
+    - python --version
+    - pip install -r requirements.txt
+    - pytest
+
+test-python-37:
+  stage: test
+  tags:
+    - github
+  only:
+    refs:
+      - branches
+  image: python:3.7
+  script:
+    - python --version
+    - pip install -r requirements.txt
+    - pytest
+
+test-python-38:
+  stage: test
+  tags:
+    - github
+  only:
+    refs:
+      - branches
+  image: python:3.8
   script:
     - python --version
     - pip install -r requirements.txt
