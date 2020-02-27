@@ -295,7 +295,6 @@
                  (rpcq:dispatch-table-add-handler dt 'test-method)
                  (rpcq:start-server :dispatch-table dt
                                     :auth-config (rpcq:make-server-auth-config
-                                                  :server-public-key *server-public-key-z85*
                                                   :server-secret-key *server-secret-key-z85*)
                                     :listen-addresses (list addr)))))
            (server-thread (bt:make-thread server-function)))
@@ -323,7 +322,6 @@
                  (rpcq:dispatch-table-add-handler dt 'test-method)
                  (rpcq:start-server :dispatch-table dt
                                     :auth-config (rpcq:make-server-auth-config
-                                                  :server-public-key *server-public-key-z85*
                                                   :server-secret-key *server-secret-key-z85*)
                                     :listen-addresses (list addr)))))
            (server-thread (bt:make-thread server-function)))

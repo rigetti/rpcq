@@ -49,8 +49,7 @@
 
 (defstruct server-auth-config
   "Holds the ZeroMQ Curve configuration for a server socket."
-  (server-secret-key nil :type (or null string))
-  (server-public-key nil :type (or null string)))
+  (server-secret-key (error "Must provide SERVER-SECRET-KEY") :type string :read-only t))
 
 (deftype dispatch-table ()
   'hash-table)
