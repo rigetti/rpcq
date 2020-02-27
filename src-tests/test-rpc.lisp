@@ -282,7 +282,7 @@
 (defun random-in-range (low high)
   "Return a random number in the range [low, high)."
   (assert (< low high))
-  (+ low (random (abs (- high low)))))
+  (+ low (random (- high low))))
 
 (deftest test-client-server-dialogue-with-curve-auth ()
   ;; Curve-enabled sockets require TCP transport. We could bind on wildcard port, but that would
