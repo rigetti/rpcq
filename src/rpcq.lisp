@@ -91,6 +91,18 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
   "Convert a vector of octets to a string"
   (flexi-streams:octets-to-string octets :external-format ':utf8))
 
+(defun to-json (obj &optional (stream *standard-output*))
+  "Serialize OBJ to JSON on STREAM."
+  (yason:encode (%serialize obj) stream))
+
+(defun to-json-string (obj)
+  "Serialize OBJ to a JSON STRING."
+  (with-output-to-string (s)
+    (to-json obj s)))
+
+(defun from-json (string-or-stream)
+  "Deserialize an RPCQ message object from the JSON object in STRING-OR-STREAM."
+  (%deserialize (yason:parse string-or-stream)))
 
 (defun serialize (obj &optional stream)
   "Serialize OBJ, either written to a stream or returned as a vector of (INTEGER 0 255)."

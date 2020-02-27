@@ -22,6 +22,9 @@
            #:deserialize
            #:clear-messages
            #:python-message-spec
+           #:from-json
+           #:to-json
+           #:to-json-string
            ;; RPC client/server functions
            #:make-dispatch-table
            #:dispatch-table-add-handler

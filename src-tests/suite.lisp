@@ -125,3 +125,57 @@
   (let ((rpcq::*use-false* t))
     (is (eql :false (rpcq:deserialize (rpcq:serialize :false))))
     (is (null (rpcq:deserialize (rpcq:serialize nil))))))
+
+(deftest test-to-from-json ()
+  (let* ((original (make-instance 'rpcq::|RPCRequest|
+                                  :|method| "test-method"
+                                  :|params| (rpcq::prepare-rpc-call-args
+                                             '("a1" 42 :kw1 "k1" :kw-2 "k2"))
+                                  :|id| "test-with-empty-params"))
+         (cloned (rpcq:from-json (rpcq:to-json-string original))))
+    (is (typep cloned 'rpcq::|RPCRequest|))
+    (is (string= (rpcq::|RPCRequest-id| original)     (rpcq::|RPCRequest-id| cloned)))
+    (is (string= (rpcq::|RPCRequest-method| original) (rpcq::|RPCRequest-method| cloned)))
+    (is (equalp (rpcq::|RPCRequest-params| original)  (rpcq::|RPCRequest-params| cloned))))
+
+  (let* ((warning (make-instance 'rpcq::|RPCWarning|
+                                 :|body| "The warning string."
+                                 :|kind| "The type of the warning raised."))
+         (original (make-instance 'rpcq::|RPCError|
+                                  :|error| "The error message."
+                                  :|id| "The RPC request id."
+                                  :|warnings| `#(,warning)))
+         (cloned (rpcq:from-json (rpcq:to-json-string original))))
+    (is (typep cloned 'rpcq::|RPCError|))
+    (let ((cloned-warnings (rpcq::|RPCError-warnings| cloned)))
+      (is (typep cloned-warnings 'vector))
+      (is (= 1 (length cloned-warnings)))
+      (let ((cloned-warning (elt cloned-warnings 0)))
+        (is (string= (rpcq::|RPCWarning-body| warning)
+                     (rpcq::|RPCWarning-body| cloned-warning)))
+        (is (string= (rpcq::|RPCWarning-kind| warning)
+                     (rpcq::|RPCWarning-kind| cloned-warning))))))
+
+  (let* ((original (make-instance 'rpcq::|BinaryExecutableResponse|
+                                  :|program| "cool-binary-program"
+                                  :|memory_descriptors|
+                                  (alexandria:plist-hash-table
+                                   `("foo" ,(make-instance 'rpcq::|ParameterSpec|
+                                                           :|type| "FLOAT"
+                                                           :|length| 2))
+                                   :test 'equal)
+                                  :|ro_sources| #(#(0 0) #(1 0))))
+         (cloned (rpcq:from-json (rpcq:to-json-string original))))
+    (is (typep cloned 'rpcq::|BinaryExecutableResponse|))
+    (is (string= (rpcq::|BinaryExecutableResponse-program| original)
+                 (rpcq::|BinaryExecutableResponse-program| cloned)))
+    (is (equalp (rpcq::|BinaryExecutableResponse-ro_sources| original)
+                (rpcq::|BinaryExecutableResponse-ro_sources| cloned)))
+    (let ((orig-mem-descriptors (rpcq::|BinaryExecutableResponse-memory_descriptors| original))
+          (cloned-mem-descriptors (rpcq::|BinaryExecutableResponse-memory_descriptors| cloned)))
+      (is (typep cloned-mem-descriptors 'hash-table))
+      (is (typep (gethash "foo" cloned-mem-descriptors) 'rpcq::|ParameterSpec|))
+      (is (string= (rpcq::|ParameterSpec-type| (gethash "foo" orig-mem-descriptors))
+                   (rpcq::|ParameterSpec-type| (gethash "foo" cloned-mem-descriptors))))
+      (is (= (rpcq::|ParameterSpec-length| (gethash "foo" orig-mem-descriptors))
+             (rpcq::|ParameterSpec-length| (gethash "foo" cloned-mem-descriptors)))))))
