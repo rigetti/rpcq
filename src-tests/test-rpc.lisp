@@ -101,6 +101,30 @@
         ;; kill the server thread
         (kill-thread-slowly server-thread)))))
 
+(deftest test-RPCRequest-client_timeout-overrides-server-timeout ()
+  (with-unique-rpc-address (addr)
+    (let* ((server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler dt (lambda () (sleep 2)) :name "test_method")
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           (let* ((id (format nil "~A" (uuid:make-v4-uuid)))
+                  (request (make-instance 'rpcq::|RPCRequest|
+                                          :|method| "test_method" :|params| (make-hash-table)
+                                          :|id| id :|client_timeout| 1)))
+             (rpcq:with-rpc-client (client addr)
+               (signals rpc-error
+                 (rpcq::%rpc-call-raw-request
+                  client
+                  id
+                  (rpcq:serialize request)))))
+        ;; kill the server thread
+        (kill-thread-slowly server-thread)))))
+
 (deftest test-server-timeout ()
   (with-unique-rpc-address (addr)
     (let* ((server-function
