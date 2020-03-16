@@ -165,6 +165,7 @@ Returns the result of the RPC method call.
   (let* ((uuid (format nil "~a" (uuid:make-v4-uuid)))
          (request (make-instance '|RPCRequest|
                                  :|id| uuid
+                                 :|client_timeout| (rpc-client-timeout client)
                                  :|params| (prepare-rpc-call-args args)
                                  :|method| (sanitize-name call)))
          (payload (serialize request)))
