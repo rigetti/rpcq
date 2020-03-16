@@ -73,6 +73,9 @@ class RPCRequest(Message):
     jsonrpc: str = "2.0"
     """The JSONRPC version."""
 
+    client_timeout: Optional[float] = None
+    """The client-side timeout for the request. The server itself may be configured with a timeout that is greater than the client-side timeout, in which case the server can choose to terminate any processing of the request."""
+
     client_key: Optional[str] = None
     """The ZeroMQ CURVE public key used to make the request, as received by the server. Empty if no key is used."""
 

@@ -101,6 +101,36 @@
         ;; kill the server thread
         (kill-thread-slowly server-thread)))))
 
+(deftest test-RPCRequest-client_timeout-overrides-server-timeout ()
+  ;; If the client provides a timeout, it should override the server
+  ;; timeout, and the server should then kill jobs that exceed this
+  ;; timeout. To test this, make a request with a client timeout of 2,
+  ;; the request job sleeps for 4 seconds and then raises an error. If
+  ;; the server correctly kills the job, the error should not be
+  ;; raised.
+  (with-unique-rpc-address (addr)
+    (let* ((server-function
+             (lambda ()
+               (let ((dt (rpcq:make-dispatch-table)))
+                 (rpcq:dispatch-table-add-handler
+                  dt
+                  (lambda ()
+                    (sleep 4)
+                    ;; Shouldn't hit this if the client timeout was
+                    ;; respected.
+                    (error "oof"))
+                  :name "test-method")
+                 (rpcq:start-server :dispatch-table dt
+                                    :listen-addresses (list addr)))))
+           (server-thread (bt:make-thread server-function)))
+      (sleep 1)
+      (unwind-protect
+           (rpcq:with-rpc-client (client addr :timeout 2)
+             (signals bt:timeout
+               (rpc-call client "test-method")))
+        ;; kill the server thread
+        (kill-thread-slowly server-thread)))))
+
 (deftest test-server-timeout ()
   (with-unique-rpc-address (addr)
     (let* ((server-function

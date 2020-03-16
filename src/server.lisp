@@ -220,10 +220,22 @@ These warnings are included in the RPC response that is returned to the caller.
                                (finish-output *error-output*)
                                (trivial-backtrace:print-backtrace c :output *error-output*)))))
                  (apply f (concatenate 'list positional-args kwargs-as-plist)))))
-        (let ((result (if timeout
-                          (bt:with-timeout (timeout)
-                            (apply-handler))
-                          (apply-handler))))
+        (let* ((client-timeout (|RPCRequest-client_timeout| request))
+               ;; TODO A timeout of NIL is supposed to signal an
+               ;; indefinite timeout. The same is signalled by 0,
+               ;; which leads to the extra logic below and means
+               ;; subtle bugs may creep in.  Can we be strict about
+               ;; NIL vs 0?  I mean just look at this mess.
+               (timeout (if (and client-timeout
+                                 (or (null timeout)
+                                     (zerop timeout)
+                                     (> timeout client-timeout)))
+                            client-timeout
+                            timeout))
+               (result (if timeout
+                           (bt:with-timeout (timeout)
+                             (apply-handler))
+                           (apply-handler))))
           (make-instance '|RPCReply|
                          :|id| (|RPCRequest-id| request)
                          :|result| result
@@ -272,7 +284,7 @@ These warnings are included in the RPC response that is returned to the caller.
                                     pool-address)
   "The thread body for an RPCQ server.  Responds to RPCQ requests which match entries in DISPATCH-TABLE and writes log entries to LOGGER.
 
-DISPATCH-TABLE and LOGGER are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signaling no timeout."
+DISPATCH-TABLE and LOGGER are both required arguments.  TIMEOUT is of type (OR NULL (REAL 0)), with NIL signaling no timeout.  This timeout can be overridden by a shorter client-side timeout, provided by the RPCRequest object (see |RPCRequest-client_timeout|)."
   (pzmq:with-socket receiver :dealer
     (pzmq:connect receiver pool-address)
     (loop (%process-raw-request receiver dispatch-table logger timeout debug))))
@@ -294,7 +306,7 @@ Argument descriptions:
  * LISTEN-ADDRESSES is a list of strings, each of which is a valid ZMQ interface address that the server will listen on.
  * THREAD-COUNT is a positive integer of the number of worker threads that the server will spawn to service requests.
  * LOGGER is the stream to which the worker threads will write debug information.  This stream is also forwarded to the RPC functions as *DEBUG-IO*.
- * TIMEOUT, of type (OR NULL (REAL 0)), sets the maximum duration that a thread will be allowed to work for before it is forcefully terminated.  A TIMEOUT value of NIL signals that no thread will ever be terminated for taking too long."
+ * TIMEOUT, of type (OR NULL (REAL 0)), sets the maximum duration that a thread will be allowed to work for before it is forcefully terminated.  A TIMEOUT value of NIL signals that no thread will ever be terminated for taking too long.  This timeout can be overridden by a shorter client-side timeout, provided by the RPCRequest object (see |RPCRequest-client_timeout|)."
   (check-type dispatch-table dispatch-table)
   (check-type logger cl-syslog:rfc5424-logger)
   (check-type thread-count (integer 1))
