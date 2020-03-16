@@ -103,7 +103,7 @@
 
 (deftest test-RPCRequest-client_timeout-overrides-server-timeout ()
   ;; If the client provides a timeout, it should override the server
-  ;; timeout, and the server should then kills jobs that exceed this
+  ;; timeout, and the server should then kill jobs that exceed this
   ;; timeout. To test this, make a request with a client timeout of 2,
   ;; the request job sleeps for 4 seconds and then raises an error. If
   ;; the server correctly kills the job, the error should not be
