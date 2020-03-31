@@ -509,7 +509,7 @@ class Program(Message):
           feature label."""
 
     scheduled_instructions: List[Instruction] = field(default_factory=list)
-    """The ordered sequence scheduled instruction objects."""
+    """The ordered sequence of scheduled instruction objects."""
 
     parameters: Dict[str, ParameterSpec] = field(default_factory=dict)
     """A mapping of dynamic parameter names to their type
