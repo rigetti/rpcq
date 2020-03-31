@@ -293,64 +293,6 @@ class Receiver(Message):
 
 
 @dataclass(eq=False, repr=False)
-class Program(Message):
-    """
-    The dynamic aspects (waveforms, readout kernels, scheduled
-  instructions and parameters) of a job.
-    """
-
-    waveforms: Dict[str, AbstractWaveform] = field(default_factory=dict)
-    """The waveforms appearing in the program by waveform
-          label."""
-
-    filters: Dict[str, AbstractKernel] = field(default_factory=dict)
-    """The readout filter kernels appearing in the program by
-          feature label."""
-
-    scheduled_instructions: List[Dict] = field(default_factory=list)
-    """The ordered sequence scheduled instruction objects."""
-
-    parameters: Dict[str, ParameterSpec] = field(default_factory=dict)
-    """A mapping of dynamic parameter names to their type
-          specification."""
-
-
-@dataclass(eq=False, repr=False)
-class ScheduleIRJob(Message):
-    """
-    The unit of work to be executed.
-    """
-
-    num_shots: int
-    """How many repetitions the job should be executed for."""
-
-    resources: Resources
-    """The resources required by the job."""
-
-    program: Program
-    """The actual program to be executed."""
-
-    operating_point: Dict[str, Dict] = field(default_factory=dict)
-    """Operating points or static instrument channel settings
-          (mapping control_name (instrument name) -> instrument channel settings
-          (instrument settings) dictionary)."""
-
-    filter_pipeline: Dict[str, FilterNode] = field(default_factory=dict)
-    """The filter pipeline. Mapping of node labels to
-          FilterNode's."""
-
-    job_id: InitVar[Optional[str]] = None
-    """A unique ID to help the submitter track the job."""
-
-    def _extend_by_deprecated_fields(self, d):
-        super()._extend_by_deprecated_fields(d)
-
-    def __post_init__(self, job_id):
-        if job_id is not None:
-            warn('job_id is deprecated; please don\'t set it anymore')
-
-
-@dataclass(eq=False, repr=False)
 class ParameterExpression(Message):
     """
     A parametric expression.
@@ -549,6 +491,64 @@ class Capture(Instruction):
     detuning: float = 0.0e+0
     """Detuning [Hz] with which the pulse envelope should be
           modulated relative to the frame frequency."""
+
+
+@dataclass(eq=False, repr=False)
+class Program(Message):
+    """
+    The dynamic aspects (waveforms, readout kernels, scheduled
+  instructions and parameters) of a job.
+    """
+
+    waveforms: Dict[str, AbstractWaveform] = field(default_factory=dict)
+    """The waveforms appearing in the program by waveform
+          label."""
+
+    filters: Dict[str, AbstractKernel] = field(default_factory=dict)
+    """The readout filter kernels appearing in the program by
+          feature label."""
+
+    scheduled_instructions: List[Instruction] = field(default_factory=list)
+    """The ordered sequence scheduled instruction objects."""
+
+    parameters: Dict[str, ParameterSpec] = field(default_factory=dict)
+    """A mapping of dynamic parameter names to their type
+          specification."""
+
+
+@dataclass(eq=False, repr=False)
+class ScheduleIRJob(Message):
+    """
+    The unit of work to be executed.
+    """
+
+    num_shots: int
+    """How many repetitions the job should be executed for."""
+
+    resources: Resources
+    """The resources required by the job."""
+
+    program: Program
+    """The actual program to be executed."""
+
+    operating_point: Dict[str, Dict] = field(default_factory=dict)
+    """Operating points or static instrument channel settings
+          (mapping control_name (instrument name) -> instrument channel settings
+          (instrument settings) dictionary)."""
+
+    filter_pipeline: Dict[str, FilterNode] = field(default_factory=dict)
+    """The filter pipeline. Mapping of node labels to
+          FilterNode's."""
+
+    job_id: InitVar[Optional[str]] = None
+    """A unique ID to help the submitter track the job."""
+
+    def _extend_by_deprecated_fields(self, d):
+        super()._extend_by_deprecated_fields(d)
+
+    def __post_init__(self, job_id):
+        if job_id is not None:
+            warn('job_id is deprecated; please don\'t set it anymore')
 
 
 @dataclass(eq=False, repr=False)
