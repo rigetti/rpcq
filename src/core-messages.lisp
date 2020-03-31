@@ -361,78 +361,6 @@
       translator.")
 
 
-(defmessage |Program| ()
-    (
-     (|waveforms|
-      :documentation "The waveforms appearing in the program by waveform\
-          label."
-      :type (:map :string -> |AbstractWaveform|)
-      :required t
-      :default nil)
-
-     (|filters|
-      :documentation "The readout filter kernels appearing in the program by\
-          feature label."
-      :type (:map :string -> |AbstractKernel|)
-      :required t
-      :default nil)
-
-     (|scheduled_instructions|
-      :documentation "The ordered sequence scheduled instruction objects."
-      :type (:list :map)
-      :required t
-      :default nil)
-
-     (|parameters|
-      :documentation "A mapping of dynamic parameter names to their type\
-          specification."
-      :type (:map :string -> |ParameterSpec|)
-      :required t
-      :default nil))
-
-  :documentation "The dynamic aspects (waveforms, readout kernels, scheduled\
-  instructions and parameters) of a job.")
-
-(defmessage |ScheduleIRJob| ()
-    (
-     (|job_id|
-      :documentation "A unique ID to help the submitter track the job."
-      :type :string
-      :required nil
-      :deprecated t)
-
-     (|num_shots|
-      :documentation "How many repetitions the job should be executed for."
-      :type :integer
-      :required t)
-
-     (|resources|
-      :documentation "The resources required by the job."
-      :type |Resources|
-      :required t)
-
-     (|operating_point|
-      :documentation "Operating points or static instrument channel settings\
-          (mapping control_name (instrument name) -> instrument channel settings\
-          (instrument settings) dictionary)."
-      :type (:map :string -> :map)
-      :required t
-      :default nil)
-
-     (|program|
-      :documentation "The actual program to be executed."
-      :type |Program|
-      :required t)
-
-     (|filter_pipeline|
-      :documentation "The filter pipeline. Mapping of node labels to\
-          FilterNode's."
-      :type (:map :string -> |FilterNode|)
-      :required t
-      :default nil))
-
-  :documentation "The unit of work to be executed.")
-
 (defmessage |ParameterExpression| ()
     (
      (|operator|
@@ -680,6 +608,78 @@
 
   :documentation "Specify an acquisition on an rx-frame as well as the\
       filters to apply.")
+
+(defmessage |Program| ()
+    (
+     (|waveforms|
+      :documentation "The waveforms appearing in the program by waveform\
+          label."
+      :type (:map :string -> |AbstractWaveform|)
+      :required t
+      :default nil)
+
+     (|filters|
+      :documentation "The readout filter kernels appearing in the program by\
+          feature label."
+      :type (:map :string -> |AbstractKernel|)
+      :required t
+      :default nil)
+
+     (|scheduled_instructions|
+      :documentation "The ordered sequence scheduled instruction objects."
+      :type (:list |Instruction|)
+      :required t
+      :default nil)
+
+     (|parameters|
+      :documentation "A mapping of dynamic parameter names to their type\
+          specification."
+      :type (:map :string -> |ParameterSpec|)
+      :required t
+      :default nil))
+
+  :documentation "The dynamic aspects (waveforms, readout kernels, scheduled\
+  instructions and parameters) of a job.")
+
+(defmessage |ScheduleIRJob| ()
+    (
+     (|job_id|
+      :documentation "A unique ID to help the submitter track the job."
+      :type :string
+      :required nil
+      :deprecated t)
+
+     (|num_shots|
+      :documentation "How many repetitions the job should be executed for."
+      :type :integer
+      :required t)
+
+     (|resources|
+      :documentation "The resources required by the job."
+      :type |Resources|
+      :required t)
+
+     (|operating_point|
+      :documentation "Operating points or static instrument channel settings\
+          (mapping control_name (instrument name) -> instrument channel settings\
+          (instrument settings) dictionary)."
+      :type (:map :string -> :map)
+      :required t
+      :default nil)
+
+     (|program|
+      :documentation "The actual program to be executed."
+      :type |Program|
+      :required t)
+
+     (|filter_pipeline|
+      :documentation "The filter pipeline. Mapping of node labels to\
+          FilterNode's."
+      :type (:map :string -> |FilterNode|)
+      :required t
+      :default nil))
+
+  :documentation "The unit of work to be executed.")
 
 (defmessage |RackMeta| ()
     (
