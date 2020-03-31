@@ -626,7 +626,7 @@
       :default nil)
 
      (|scheduled_instructions|
-      :documentation "The ordered sequence scheduled instruction objects."
+      :documentation "The ordered sequence of scheduled instruction objects."
       :type (:list |Instruction|)
       :required t
       :default nil)
