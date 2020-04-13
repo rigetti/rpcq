@@ -347,7 +347,7 @@ class Pulse(Instruction):
     waveform: str
     """The waveform label"""
 
-    scale: float = 1.e+0
+    scale: Optional[float] = 1.e+0
     """Dimensionless (re-)scaling factor which is applied to
           the envelope."""
 
@@ -385,7 +385,7 @@ class FlatPulse(Instruction):
     """Detuning [Hz] with which the pulse envelope should be
           modulated relative to the frame frequency."""
 
-    scale: float = 1.e+0
+    scale: Optional[float] = 1.e+0
     """Dimensionless (re-)scaling factor which is applied to
           the envelope."""
 

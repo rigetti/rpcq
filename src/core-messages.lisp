@@ -422,7 +422,7 @@
       :documentation "Dimensionless (re-)scaling factor which is applied to\
           the envelope."
       :type :float
-      :required t
+      :required nil
       :default 1.0)
 
      (|phase|
@@ -478,7 +478,7 @@
       :documentation "Dimensionless (re-)scaling factor which is applied to\
           the envelope."
       :type :float
-      :required t
+      :required nil
       :default 1.0))
 
   :documentation "Instruction to play a pulse with a constant amplitude\
