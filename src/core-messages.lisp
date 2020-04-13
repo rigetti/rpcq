@@ -566,6 +566,21 @@
   :documentation "Shift the frequency of a tx-frame by a specific amount at a\
       specific time.")
 
+(defmessage |SetScale| (|Instruction|)
+  (
+   (|frame|
+    :documentation "The frame label for which to set the scale."
+    :type :string
+    :required t)
+
+   (|scale|
+    :documentation "Scale (unitless) to apply to waveforms generated on the frame."
+    :type :float
+    :required t
+    :default 1.0))
+
+  :documentation "Set the scale of a tx-frame to a value at a specific time.")
+
 (defmessage |Capture| (|Instruction|)
     (
      (|frame|

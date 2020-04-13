@@ -464,6 +464,19 @@ class ShiftFrequency(Instruction):
 
 
 @dataclass(eq=False, repr=False)
+class SetScale(Instruction):
+    """
+    Set the scale of a tx-frame to a value at a specific time.
+    """
+
+    frame: str
+    """The frame label for which to set the scale."""
+
+    scale: float = 1.e+0
+    """Scale (unitless) to apply to waveforms generated on the frame."""
+
+
+@dataclass(eq=False, repr=False)
 class Capture(Instruction):
     """
     Specify an acquisition on an rx-frame as well as the
