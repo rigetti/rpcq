@@ -347,7 +347,7 @@ class Pulse(Instruction):
     waveform: str
     """The waveform label"""
 
-    scale: float = 1.e+0
+    scale: Optional[float] = 1.e+0
     """Dimensionless (re-)scaling factor which is applied to
           the envelope."""
 
@@ -385,7 +385,7 @@ class FlatPulse(Instruction):
     """Detuning [Hz] with which the pulse envelope should be
           modulated relative to the frame frequency."""
 
-    scale: float = 1.e+0
+    scale: Optional[float] = 1.e+0
     """Dimensionless (re-)scaling factor which is applied to
           the envelope."""
 
@@ -461,6 +461,19 @@ class ShiftFrequency(Instruction):
     delta: float = 0.0e+0
     """Frequency shift (new-old) [Hz] to apply to the frame
           frequency."""
+
+
+@dataclass(eq=False, repr=False)
+class SetScale(Instruction):
+    """
+    Set the scale of a tx-frame to a value at a specific time.
+    """
+
+    frame: str
+    """The frame label for which to set the scale."""
+
+    scale: float = 1.e+0
+    """Scale (unitless) to apply to waveforms generated on the frame."""
 
 
 @dataclass(eq=False, repr=False)
