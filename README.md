@@ -182,5 +182,6 @@ Developed at [Rigetti Computing](https://github.com/rigetticomputing) by
 [Eric Peterson](https://github.com/ecp-rigetti),
 [Colm Ryan](https://github.com/caryan),
 [Peter Karalekas](https://github.com/karalekas),
-[Guen Prawiroatmodjo](https://github.com/guenp), and
+[Guen Prawiroatmodjo](https://github.com/guenp),
+[Erik Davis](https://github.com/kilimanjaro), and
 [Robert Smith](https://github.com/tarballs-are-good).
