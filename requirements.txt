@@ -12,6 +12,6 @@ ruamel.yaml
 
 # testing
 numpy
-pytest
+pytest>=5.4.0
 pytest-asyncio
 pytest-cov
