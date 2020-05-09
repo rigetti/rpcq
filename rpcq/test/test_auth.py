@@ -310,3 +310,56 @@ async def test_two_clients(server, request, m_endpoints):
     assert await b == 0.1
     assert await c == 0.2
     assert await d == 0.4
+
+
+@pytest.mark.parametrize('authorized_key_count', (1, 10, 100, 1000, 10000))
+def test_benchmark_key_authorization(authorized_key_count, benchmark, m_endpoints, tmpdir):
+    """
+    Measure the effect that increasing authorized key count has on connection latency. 
+
+    The list of authorized keys must be maintained in memory by the ZeroMQ server, and this test
+    is meant to assess how well it scales with the number of keys authorized for connection.
+    How long does connection (and a "no-op" RPC call) take, relative to the number of other keys
+    also authorized?
+    """
+
+    client = build_auth_client(m_endpoints[0])
+
+    # Generate many keys which are not the test client's key in order to fill up the authorized
+    # key list. Write them to the temporary directory for use by the server.
+    for key in [zmq.curve_keypair()[0] for _ in range(authorized_key_count - 1)]:
+        write_key(tmpdir, key)
+
+    # Write the correct key
+    write_key(tmpdir, CLIENT_PUBLIC_KEY)
+
+    def run_server():
+        auth_config = ServerAuthConfig(
+            server_secret_key=SERVER_SECRET_KEY,
+            server_public_key=SERVER_PUBLIC_KEY,
+            client_keys_directory=tmpdir
+        )
+
+        server = Server(auth_config=auth_config)
+
+        @server.rpc_handler
+        async def no_op():
+            return
+
+        server.run(m_endpoints[1], loop=asyncio.new_event_loop())
+
+    proc = Process(target=run_server)
+    proc.start()
+
+    try:
+        # Assert that the service is listening, give it time to process all of its keys and start up
+        client.call('no_op', rpc_timeout=10)
+
+        def run_client():
+            client.call('no_op', rpc_timeout=1)
+
+        benchmark(run_client)
+
+        # Forcibly kill the server process and release the socket in time for the next test
+    finally:
+        os.kill(proc.pid, signal.SIGINT)
