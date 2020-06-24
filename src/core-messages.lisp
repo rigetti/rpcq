@@ -870,6 +870,13 @@
      (|flux_current|
       :documentation "Slow flux current [Amps]."
       :type :float
+      :required nil)
+
+     (|flux_relay|
+      :documentation "Set the state of the Flux relay.\
+          True  - Relay closed, allows flux current to flow.\
+          False - Relay open, no flux current can flow."
+      :type :bool
       :required nil))
 
   :documentation "Configuration for a single QFD Channel.")
