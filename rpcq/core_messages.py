@@ -694,6 +694,11 @@ class QFDChannel(Message):
     flux_current: Optional[float] = None
     """Slow flux current [Amps]."""
 
+    flux_relay: Optional[bool] = None
+    """Set the state of the Flux relay.
+          True  - Relay closed, allows flux current to flow.
+          False - Relay open, no flux current can flow."""
+
 
 @dataclass(eq=False, repr=False)
 class QGSChannel(Message):
