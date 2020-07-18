@@ -47,9 +47,10 @@
   (let ((*python-types* *python-instance-check-types*))
     (python-type field-type)))
 
-(defun python-argspec-default (field-type default)
-  "Translate DEFAULT values for immutable objects of a given
-FIELD-TYPE to python."
+(defun python-argspec-default (field-type default &optional defaultp)
+  "Translate DEFAULT values for immutable objects of a given FIELD-TYPE to python.
+
+DEFAULTP indicates whether DEFAULT has a value of NIL because NIL was provided in the DEFMESSAGE (T), or because it was missing in the DEFMESSAGE (NIL)."
   (typecase field-type
     ((eql :string)
      (if default
@@ -60,9 +61,10 @@ FIELD-TYPE to python."
          (format nil "b~S" (to-string default))
          "None"))
     ((eql :bool)
-     (if default
-         "True"
-         "False"))
+     (cond
+       ((not defaultp) "None")
+       (default        "True")
+       (t              "False")))
     ((eql :integer)
      (if default
          (format nil "~d" default)
@@ -207,11 +209,10 @@ else:
                    (required (getf field-settings ':required))
                    (documentation (getf field-settings ':documentation))
                    (defaultp (member ':default field-settings))
-                   (default (or (getf field-settings ':default)))
+                   (default (getf field-settings ':default))
                    (deprecated (getf field-settings ':deprecated))
                    (deprecates (getf field-settings ':deprecates))
                    (deprecated-by (getf field-settings ':deprecated-by)))
-
               ;; optional fields automatically acquire a NIL default
               (unless (or required defaultp)
                 (setf default nil)
@@ -228,7 +229,7 @@ else:
                    (push (list slot-name nil required "None") deprecated-fields)))
                 ;; recipe for a deprecating slot
                 (deprecates
-                 (let ((definite-default (python-argspec-default type default)))
+                 (let ((definite-default (python-argspec-default type default (member ':default field-settings))))
                    (python-out `(("    ~a: ~a = ~a"      ,(symbol-name slot-name)
                                                          ,(python-maybe-optional-typing-type type t)
                                                          ,definite-default)
@@ -238,7 +239,8 @@ else:
                 (defaultp
                  (python-out `(("    ~a: ~a = ~a"       ,(symbol-name slot-name)
                                                         ,(python-maybe-optional-typing-type type required)
-                                                        ,(python-argspec-default type default))
+                                                        ,(python-argspec-default type default
+                                                                                 (member ':default field-settings)))
                                ("    \"\"\"~a\"\"\""    ,documentation))))
                 ;; recipe for a slot otherwise
                 (t

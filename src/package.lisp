@@ -52,4 +52,5 @@
            #:rpc-protocol-error
            #:rpc-protocol-error-id
            #:rpc-protocol-error-object
+           #:optional-bool
            ))

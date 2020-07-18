@@ -176,6 +176,12 @@ The input strings are assumed to be FORMAT-compatible, so sequences like ~<newli
       (stream
        (%deserialize (messagepack:decode-stream payload))))))
 
+(deftype optional-bool ()
+  "An optional boolean value includes the extra None value, specific to Python."
+  `(or null
+       boolean
+       (eql :none)))
+
 (defun slot-type-and-initform (field-type required default)
   "Translate a FIELD-TYPE to a Lisp type and initform taking into account
 whether the field is REQUIRED and a specified DEFAULT value.
@@ -216,6 +222,7 @@ We distinguish between the following options for any field type:
     - if a value is not provided, then a fallback value is used
     - you can explicitly pass None/null/NIL for this field
 "
+  (check-type required optional-bool)
   (cond
 
     ;; handle :string :integer :float :bool :bytes
@@ -226,7 +233,7 @@ We distinguish between the following options for any field type:
                               :bytes (simple-array (unsigned-byte 8))
                               :integer fixnum
                               :float double-float
-                              :bool boolean
+                              :bool optional-bool
                               :any t)
                             field-type))
           ;; make sure the default value (if defined) is coerced
@@ -317,6 +324,12 @@ LIMITATIONS:
                                      "-"
                                      (snake-to-kebab (symbol-name slot-name))))
 
+           (defaultify (default defaultp field-type)
+             (cond
+              (defaultp default)
+              ((eql field-type ':bool) ':none)
+              (t nil)))
+
            (make-slot-spec (field-spec)
              (let*
                  ((slot-name (car field-spec))
@@ -325,7 +338,9 @@ LIMITATIONS:
                   (required (getf field-settings ':required))
                   (documentation (getf field-settings ':documentation))
                   (defaultp (member ':default field-settings))
-                  (default (getf field-settings ':default))
+                  (default (defaultify (getf field-settings ':default)
+                                       defaultp
+                                       field-type))
                   (deprecated (getf field-settings ':deprecated))
                   (deprecates (getf field-settings ':deprecates))
                   (deprecated-by (getf field-settings ':deprecated-by)))
