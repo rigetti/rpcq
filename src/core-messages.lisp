@@ -898,8 +898,7 @@
           True  - Relay closed, allows flux current to flow.\
           False - Relay open, no flux current can flow."
       :type :bool
-      :required nil
-      :default nil))
+      :required nil))
 
   :documentation "Configuration for a single QFD Channel.")
 

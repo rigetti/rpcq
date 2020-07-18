@@ -50,14 +50,22 @@
         :required t
         :default "a string"
         :documentation "String docs.")
-
        (flt
         :type :float
         :required t
         :default 0.0
-        :documentation "A float."))
-
-
+        :documentation "A float.")
+       (optional-bool-none
+        :type :bool
+        :required nil)
+       (optional-bool-false
+        :type :bool
+        :required nil
+        :default nil)
+       (optional-bool-true
+        :type :bool
+        :required nil
+        :default t))
     :documentation "Test message")
 
   (let ((m (make-instance 'my-msg :required-int 5)))
@@ -66,7 +74,13 @@
     (is (string= (gethash "yo" (my-msg-optional-map m)) "working"))
     (is (= (length (gethash "suite" rpcq::*messages*)) 1))
     (is (typep (my-msg-flt m) 'double-float))
-    (is (string= (my-msg-str m) "a string"))))
+    (is (string= (my-msg-str m) "a string"))
+    (is (typep (my-msg-optional-bool-none m) 'optional-bool))
+    (is (eql (my-msg-optional-bool-none m) ':none))
+    (is (typep (my-msg-optional-bool-true m) 'optional-bool))
+    (is (my-msg-optional-bool-true m))
+    (is (typep (my-msg-optional-bool-false m) 'optional-bool))
+    (is (null (my-msg-optional-bool-false m)))))
 
 (deftest test-prepare-rpc-call-args ()
   (loop
