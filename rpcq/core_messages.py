@@ -692,7 +692,7 @@ class QFDChannel(Message):
     """Delay [seconds] to account for inter-channel skew."""
 
     flux_current: Optional[float] = None
-    """Slow flux current [Amps]."""
+    """Flux current [Amps]."""
 
     relay_closed: Optional[bool] = None
     """Set the state of the Flux relay.
@@ -793,6 +793,45 @@ class CWChannel(Message):
 
 
 @dataclass(eq=False, repr=False)
+class QDOSlowFluxChannel(Message):
+    """
+    Configuration for a single QDO Slow Flux Channel.
+    """
+
+    channel_index: int
+    """The channel index on the QDO, zero indexed from the
+          lowest channel, as installed in the box. Flux index typically starts at 4."""
+
+    flux_current: Optional[float] = None
+    """Flux current [Amps]."""
+
+    relay_closed: Optional[bool] = False
+    """Set the state of the Flux relay.
+          True  - Relay closed, allows flux current to flow.
+          False - Relay open, no flux current can flow."""
+
+
+@dataclass(eq=False, repr=False)
+class QDOFastFluxChannel(Message):
+    """
+    Configuration for a single QDO Fast Flux Channel.
+    """
+
+    channel_index: int
+    """The channel index on the QDO, zero indexed from the
+          lowest channel, as installed in the box."""
+
+    direction: Optional[str] = "tx"
+    """The QDO is a device that transmits pulses."""
+
+    delay: float = 0.0e+0
+    """Delay [seconds] to account for inter-channel skew."""
+
+    flux_current: Optional[float] = None
+    """Flux current [Amps]."""
+
+
+@dataclass(eq=False, repr=False)
 class LegacyUSRPSequencer(Message):
     """
     Configuration for a Legacy USRP Sequencer
@@ -809,6 +848,16 @@ class LegacyUSRPSequencer(Message):
 class QFDSequencer(Message):
     """
     Configuration for a single QFD Sequencer.
+    """
+
+    tx_channel: str
+    """The label of the associated channel."""
+
+
+@dataclass(eq=False, repr=False)
+class QDOSequencer(Message):
+    """
+    Configuration for a single QDO Sequencer.
     """
 
     tx_channel: str
