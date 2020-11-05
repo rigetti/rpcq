@@ -868,7 +868,7 @@
       :default 0.0)
 
      (|flux_current|
-      :documentation "Slow flux current [Amps]."
+      :documentation "Flux current [Amps]."
       :type :float
       :required nil
       :default nil)
@@ -1019,6 +1019,58 @@
 
   :documentation "Configuration for a single CW Generator Channel.")
 
+(defmessage |QDOSlowFluxChannel| ()
+    (
+     (|channel_index|
+      :documentation "The channel index on the QDO, zero indexed from the\
+          lowest channel, as installed in the box. Flux index typically starts at 4."
+      :type :integer
+      :required t)
+
+     (|flux_current|
+      :documentation "Flux current [Amps]."
+      :type :float
+      :required nil
+      :default nil)
+
+     (|relay_closed|
+      :documentation "Set the state of the Flux relay.\
+          True  - Relay closed, allows flux current to flow.\
+          False - Relay open, no flux current can flow."
+      :type :bool
+      :required nil
+      :default nil))
+
+  :documentation "Configuration for a single QDO Slow Flux Channel.")
+
+(defmessage |QDOFastFluxChannel| ()
+    (
+     (|direction|
+      :documentation "The QDO is a device that transmits pulses."
+      :type :string
+      :required nil
+      :default "tx")
+
+     (|channel_index|
+      :documentation "The channel index on the QDO, zero indexed from the\
+          lowest channel, as installed in the box."
+      :type :integer
+      :required t)
+
+     (|delay|
+      :documentation "Delay [seconds] to account for inter-channel skew."
+      :type :float
+      :required t
+      :default 0.0)
+
+     (|flux_current|
+      :documentation "Flux current [Amps]."
+      :type :float
+      :required nil
+      :default nil))
+
+  :documentation "Configuration for a single QDO Fast Flux Channel.")
+
 (defmessage |LegacyUSRPSequencer| ()
     (
      (|tx_channel|
@@ -1041,6 +1093,15 @@
       :required t))
 
   :documentation "Configuration for a single QFD Sequencer.")
+
+(defmessage |QDOSequencer| ()
+    (
+     (|tx_channel|
+      :documentation "The label of the associated channel."
+      :type :string
+      :required t))
+
+  :documentation "Configuration for a single QDO Sequencer.")
 
 (defmessage |QFDx2Sequencer| ()
     (
