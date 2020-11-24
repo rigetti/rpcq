@@ -624,6 +624,21 @@
   :documentation "Specify an acquisition on an rx-frame as well as the\
       filters to apply.")
 
+(defmessage |MNIOConnection| ()
+    (
+     (|port|
+      :documentation "The physical Tsunami MNIO port, indexed from 0, \
+          where this connection originates."
+      :type :integer
+      :required t)
+
+     (|destination|
+      :documentation "The Tsunami where this connection terminates."
+      :type :string
+      :required t))
+
+  :documentation "Description of one side of an MNIO connection between two Tsunamis.")
+
 (defmessage |Program| ()
     (
      (|waveforms|
@@ -762,6 +777,11 @@
       :documentation "Instrument type (driver class name)."
       :type :string
       :required t)
+
+     (|mnio_connections|
+      :documentation "MNIO network connections between Tsunami instruments"
+      :type (:map :string -> |MNIOConnection|)
+      :required nil)
 
      (|channels|
       :documentation "Mapping of channel labels to channel settings"

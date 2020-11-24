@@ -507,6 +507,20 @@ class Capture(Instruction):
 
 
 @dataclass(eq=False, repr=False)
+class MNIOConnection(Message):
+    """
+    Description of one side of an MNIO connection between two Tsunamis.
+    """
+
+    port: int
+    """The physical Tsunami MNIO port, indexed from 0, 
+          where this connection originates."""
+
+    destination: str
+    """The Tsunami where this connection terminates."""
+
+
+@dataclass(eq=False, repr=False)
 class Program(Message):
     """
     The dynamic aspects (waveforms, readout kernels, scheduled
@@ -617,6 +631,9 @@ class Instrument(Message):
     instrument_type: str
     """Instrument type (driver class name)."""
 
+    mnio_connections: Dict[str, MNIOConnection] = field(default_factory=dict)
+    """MNIO network connections between Tsunami instruments"""
+
     channels: Dict[str, Any] = field(default_factory=dict)
     """Mapping of channel labels to channel settings"""
 
@@ -694,7 +711,7 @@ class QFDChannel(Message):
     flux_current: Optional[float] = None
     """Flux current [Amps]."""
 
-    relay_closed: Optional[bool] = None
+    relay_closed: Optional[bool] = False
     """Set the state of the Flux relay.
           True  - Relay closed, allows flux current to flow.
           False - Relay open, no flux current can flow."""
