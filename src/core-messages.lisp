@@ -1071,6 +1071,11 @@
 
   :documentation "Configuration for a single QDO Fast Flux Channel.")
 
+(defmessage |YokogawaGS200Channel| ()
+    ()
+
+  :documentation "Configuration for a single Yokogawa GS200 Channel.")
+
 (defmessage |LegacyUSRPSequencer| ()
     (
      (|tx_channel|
