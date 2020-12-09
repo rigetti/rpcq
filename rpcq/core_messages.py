@@ -849,6 +849,13 @@ class QDOFastFluxChannel(Message):
 
 
 @dataclass(eq=False, repr=False)
+class YokogawaGS200Channel(Message):
+    """
+    Configuration for a single Yokogawa GS200 Channel.
+    """
+
+
+@dataclass(eq=False, repr=False)
 class LegacyUSRPSequencer(Message):
     """
     Configuration for a Legacy USRP Sequencer
