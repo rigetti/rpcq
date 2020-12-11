@@ -220,19 +220,7 @@ These warnings are included in the RPC response that is returned to the caller.
                                (finish-output *error-output*)
                                (trivial-backtrace:print-backtrace c :output *error-output*)))))
                  (apply f (concatenate 'list positional-args kwargs-as-plist)))))
-        (let* ((client-timeout (|RPCRequest-client_timeout| request))
-               ;; TODO A timeout of NIL is supposed to signal an
-               ;; indefinite timeout. The same is signalled by 0,
-               ;; which leads to the extra logic below and means
-               ;; subtle bugs may creep in.  Can we be strict about
-               ;; NIL vs 0?  I mean just look at this mess.
-               (timeout (if (and client-timeout
-                                 (or (null timeout)
-                                     (zerop timeout)
-                                     (> timeout client-timeout)))
-                            client-timeout
-                            timeout))
-               (result (if timeout
+        (let* ((result (if timeout
                            (bt:with-timeout (timeout)
                              (apply-handler))
                            (apply-handler))))
@@ -267,7 +255,19 @@ These warnings are included in the RPC response that is returned to the caller.
                             (|RPCRequest-id| request)
                             (|RPCRequest-method| request))
 
-      (let ((reply (%process-request request dispatch-table timeout debug)))
+      (let* ((client-timeout (|RPCRequest-client_timeout| request))
+             ;; TODO A timeout of NIL is supposed to signal an
+             ;; indefinite timeout. The same is signalled by 0,
+             ;; which leads to the extra logic below and means
+             ;; subtle bugs may creep in.  Can we be strict about
+             ;; NIL vs 0?  I mean just look at this mess.
+             (timeout (if (and client-timeout
+                               (or (null timeout)
+                                   (zerop timeout)
+                                   (> timeout client-timeout)))
+                          client-timeout
+                          timeout))
+             (reply (%process-request request dispatch-table timeout debug)))
         (log-completion-message logger request reply start-time)
         (handler-case
             (%push-raw-request receiver identity empty-frame (serialize reply))
