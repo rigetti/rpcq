@@ -513,7 +513,7 @@ class MNIOConnection(Message):
     """
 
     port: int
-    """The physical Tsunami MNIO port, indexed from 0, 
+    """The physical Tsunami MNIO port, indexed from 0,
           where this connection originates."""
 
     destination: str
@@ -711,7 +711,7 @@ class QFDChannel(Message):
     flux_current: Optional[float] = None
     """Flux current [Amps]."""
 
-    relay_closed: Optional[bool] = False
+    relay_closed: Optional[bool] = None
     """Set the state of the Flux relay.
           True  - Relay closed, allows flux current to flow.
           False - Relay open, no flux current can flow."""
