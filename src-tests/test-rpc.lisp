@@ -261,7 +261,7 @@
                                             (let ((messagepack:*extended-types*
                                                     (messagepack:define-extension-types
                                                         '(0 deserialize-bomb))))
-                                              (rpcq::serialize (make-instance 'deserialize-bomb :id 9)))))
+                                              (rpcq::serialize (make-instance 'deserialize-bomb 'messagepack-sym:id 9)))))
              (is (search "Threw generic error before RPC call"
                          (get-output-stream-string log-stream))))
         ;; kill the server thread
