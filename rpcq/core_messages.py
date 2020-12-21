@@ -507,6 +507,20 @@ class Capture(Instruction):
 
 
 @dataclass(eq=False, repr=False)
+class MNIOConnection(Message):
+    """
+    Description of one side of an MNIO connection between two Tsunamis.
+    """
+
+    port: int
+    """The physical Tsunami MNIO port, indexed from 0,
+          where this connection originates."""
+
+    destination: str
+    """The Tsunami where this connection terminates."""
+
+
+@dataclass(eq=False, repr=False)
 class Program(Message):
     """
     The dynamic aspects (waveforms, readout kernels, scheduled
@@ -616,6 +630,9 @@ class Instrument(Message):
 
     instrument_type: str
     """Instrument type (driver class name)."""
+
+    mnio_connections: Dict[str, MNIOConnection] = field(default_factory=dict)
+    """MNIO network connections between Tsunami instruments"""
 
     channels: Dict[str, Any] = field(default_factory=dict)
     """Mapping of channel labels to channel settings"""
