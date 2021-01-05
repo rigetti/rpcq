@@ -243,7 +243,6 @@ We distinguish between the following options for any field type:
                                  ;; accept a string as the default value for a bytes object
                                  (to-octets default)
                                  (coerce default basic-type)))))
-
        (if required
            (values basic-type coerced-default)
 
@@ -253,8 +252,8 @@ We distinguish between the following options for any field type:
     ;; handle defined message types
     ((symbolp field-type)
      (if required
-         (values `(or null ,field-type) default)
-         (values field-type default)))
+         (values field-type default)
+         (values `(or null ,field-type) default)))
 
     ;; handle lists
     ((eq ':list (car field-type))
