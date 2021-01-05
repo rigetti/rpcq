@@ -22,7 +22,7 @@ class ParameterSpec(Message):
     Specification of a dynamic parameter type and array-length.
     """
 
-    type: str = None
+    type: str = ""
     """The parameter type, e.g., one of 'INTEGER', or 'FLOAT'."""
 
     length: int = 1

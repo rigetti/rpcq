@@ -23,7 +23,7 @@
       :documentation "The parameter type, e.g., one of 'INTEGER', or 'FLOAT'."
       :type :string
       :required t
-      :default nil)
+      :default "")
 
      (|length|
       :documentation "If this is not 1, the parameter is an array of this length."

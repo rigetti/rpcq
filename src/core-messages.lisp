@@ -157,7 +157,8 @@
    (|t0|
     :documentation "Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."
     :type :float
-    :required t)
+    :required t
+    :default 0.0)
 
    (|anh|
     :documentation "Anharmonicity of the qubit, f01-f12 in Hz"

@@ -132,7 +132,7 @@ class HermiteGaussianWaveform(TemplateWaveform):
     fwhm: Optional[float] = None
     """Full Width Half Max shape paramter in seconds"""
 
-    t0: float = None
+    t0: float = 0.0e+0
     """Center time coordinate of the shape in seconds. Defaults to mid-point of pulse."""
 
     anh: float = -2.1e+8
@@ -513,7 +513,7 @@ class MNIOConnection(Message):
     """
 
     port: int
-    """The physical Tsunami MNIO port, indexed from 0,
+    """The physical Tsunami MNIO port, indexed from 0, 
           where this connection originates."""
 
     destination: str
