@@ -30,7 +30,7 @@ class MyClass(object):
         self.num = num
 
     async def add(self, *args):
-        asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
         return sum(args) + self.num
 
     def blocking_add(self, *args):
