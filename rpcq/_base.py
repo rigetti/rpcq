@@ -19,7 +19,7 @@ import sys
 
 import msgpack
 import rapidjson
-from ruamel import yaml
+import ruyaml as yaml
 
 if sys.version_info < (3, 7):
     from rpcq.external.dataclasses import astuple, replace, fields
