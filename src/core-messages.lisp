@@ -1114,6 +1114,11 @@
      (|tx_channel|
       :documentation "The label of the associated channel."
       :type :string
+      :required t)
+
+     (|sequencer_index|
+      :documentation "The sequencer index of this sequencer."
+      :type :integer
       :required t))
 
   :documentation "Configuration for a single QFD Sequencer.")
@@ -1123,6 +1128,11 @@
      (|tx_channel|
       :documentation "The label of the associated channel."
       :type :string
+      :required t)
+
+     (|sequencer_index|
+      :documentation "The sequencer index of this sequencer."
+      :type :integer
       :required t))
 
   :documentation "Configuration for a single QDO Sequencer.")
@@ -1132,6 +1142,10 @@
      (|tx_channel|
       :documentation "The label of the associated channel."
       :type :string
+      :required t)
+     (|sequencer_index|
+      :documentation "The sequencer index of this sequencer."
+      :type :integer
       :required t))
 
   :documentation "Configuration for a single QFDx2 Sequencer.")
@@ -1141,6 +1155,10 @@
      (|tx_channel|
       :documentation "The label of the associated channel."
       :type :string
+      :required t)
+     (|sequencer_index|
+      :documentation "The sequencer index of this sequencer."
+      :type :integer
       :required t))
 
   :documentation "Configuration for a single QGS Sequencer.")
@@ -1150,6 +1168,10 @@
      (|tx_channel|
       :documentation "The label of the associated channel."
       :type :string
+      :required t)
+     (|sequencer_index|
+      :documentation "The sequencer index of this sequencer."
+      :type :integer
       :required t))
 
   :documentation "Configuration for a single QGSx2 Sequencer.")

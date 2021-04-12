@@ -8,6 +8,7 @@ import sys
 
 from warnings import warn
 from rpcq._base import Message
+from rpcq.messages import ParameterSpec, PatchTarget
 from typing import Any, List, Dict, Optional
 
 if sys.version_info < (3, 7):
@@ -711,7 +712,7 @@ class QFDChannel(Message):
     flux_current: Optional[float] = None
     """Flux current [Amps]."""
 
-    relay_closed: Optional[bool] = None
+    relay_closed: Optional[bool] = False
     """Set the state of the Flux relay.
           True  - Relay closed, allows flux current to flow.
           False - Relay open, no flux current can flow."""
@@ -877,6 +878,9 @@ class QFDSequencer(Message):
     tx_channel: str
     """The label of the associated channel."""
 
+    sequencer_index: int
+    """The sequencer index of this sequencer."""
+
 
 @dataclass(eq=False, repr=False)
 class QDOSequencer(Message):
@@ -886,6 +890,9 @@ class QDOSequencer(Message):
 
     tx_channel: str
     """The label of the associated channel."""
+
+    sequencer_index: int
+    """The sequencer index of this sequencer."""
 
 
 @dataclass(eq=False, repr=False)
@@ -897,6 +904,9 @@ class QFDx2Sequencer(Message):
     tx_channel: str
     """The label of the associated channel."""
 
+    sequencer_index: int
+    """The sequencer index of this sequencer."""
+
 
 @dataclass(eq=False, repr=False)
 class QGSSequencer(Message):
@@ -907,6 +917,9 @@ class QGSSequencer(Message):
     tx_channel: str
     """The label of the associated channel."""
 
+    sequencer_index: int
+    """The sequencer index of this sequencer."""
+
 
 @dataclass(eq=False, repr=False)
 class QGSx2Sequencer(Message):
@@ -916,6 +929,9 @@ class QGSx2Sequencer(Message):
 
     tx_channel: str
     """The label of the associated channel."""
+
+    sequencer_index: int
+    """The sequencer index of this sequencer."""
 
 
 @dataclass(eq=False, repr=False)
