@@ -109,7 +109,7 @@ class Message:
     def __hash__(self):
         return hash((self.__class__, astuple(self)))
 
-    _types = None
+    _types = {}
 
     @staticmethod
     def types():
@@ -120,13 +120,12 @@ class Message:
         :return: A dictionary of ``Message`` types.
         :rtype: Dict[str,type]
         """
-        if Message._types is None:
-            Message._types = {}
-            classes_to_process = [Message]
-            while classes_to_process:
-                atom = classes_to_process.pop()
-                classes_to_process += atom.__subclasses__()
-                Message._types[atom.__name__] = (atom, inspect.getfullargspec(atom.__init__).args)
+        classes_to_process = [Message]
+        while classes_to_process:
+            atom = classes_to_process.pop()
+            classes_to_process += atom.__subclasses__()
+            Message._types[atom.__name__] = (atom, inspect.getfullargspec(atom.__init__).args)
+
         return Message._types
 
 
