@@ -13,7 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 ##############################################################################
-
+import functools
 import inspect
 import sys
 
@@ -109,9 +109,8 @@ class Message:
     def __hash__(self):
         return hash((self.__class__, astuple(self)))
 
-    _types = {}
-
     @staticmethod
+    @functools.lru_cache()
     def types():
         """
         Return a mapping ``{type_name: (message_type, args)}`` for all defined Message's,
@@ -120,13 +119,14 @@ class Message:
         :return: A dictionary of ``Message`` types.
         :rtype: Dict[str,type]
         """
+        types = {}
         classes_to_process = [Message]
         while classes_to_process:
             atom = classes_to_process.pop()
             classes_to_process += atom.__subclasses__()
-            Message._types[atom.__name__] = (atom, inspect.getfullargspec(atom.__init__).args)
+            types[atom.__name__] = (atom, inspect.getfullargspec(atom.__init__).args)
 
-        return Message._types
+        return types
 
 
 def _default(obj):
