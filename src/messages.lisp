@@ -449,3 +449,15 @@
     :type :string
     :required t))
   :documentation "Up-to-date Quilt calibrations.")
+
+(defmessage |GetExecutionResultsResponse| ()
+  ((|buffers|
+    :documentation "Result buffers for a completed ExecutorJob."
+    :type (:map :string -> (:map :string -> :any))
+    :required t)
+
+   (|execution_duration_microseconds|
+    :documentation "Duration (in microseconds) ExecutorJob held exclusive access to quantum hardware."
+    :type :integer
+    :required t))
+  :documentation "Results of a completed ExecutorJob execution.")
