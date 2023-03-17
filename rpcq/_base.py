@@ -173,8 +173,14 @@ def from_msgpack(b, *, max_bin_len=MAX_BIN_LEN, max_str_len=MAX_STR_LEN):
     #   Otherwise, unpack to Python str (or unicode on Python 2) by decoding with UTF-8 encoding (recommended).
     #   In msgpack >= 0.6, max_xxx_len is reduced from 2 GB to 1 MB, so we set the relevant ones
     #       to 2 GB as to not run into issues with the size of the values returned from rpcq
-    return msgpack.loads(b, object_hook=_object_hook, raw=False,
-                         max_bin_len=max_bin_len, max_str_len=max_str_len)
+    return msgpack.loads(
+        b,
+        object_hook=_object_hook,
+        raw=False,
+        max_bin_len=max_bin_len,
+        max_str_len=max_str_len,
+        strict_map_key=False,
+    )
 
 
 def to_json(obj):

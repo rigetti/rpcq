@@ -5,7 +5,7 @@
 
 # msgpack 1.0 introduced breaking changes. See
 # https://github.com/rigetti/rpcq/issues/118
-msgpack >=0.6,<1.0
+msgpack >=1.0,<2.0
 python-rapidjson
 pyzmq>=17
 ruamel.yaml
