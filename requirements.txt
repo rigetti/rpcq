@@ -3,9 +3,7 @@
 #
 # https://github.com/conda-forge/rpcq-feedstock/blob/master/recipe/meta.yaml
 
-# msgpack 1.0 introduced breaking changes. See
-# https://github.com/rigetti/rpcq/issues/118
-msgpack >=0.6,<1.0
+msgpack >=0.6,<2.0
 python-rapidjson
 pyzmq>=17
 ruamel.yaml
