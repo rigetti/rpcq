@@ -47,8 +47,12 @@
 
 (defun unpack-foreign-msg-to-bytes (msg)
   "Converts a foreign array of unsigned characters to a Lisp vector of such."
-  (cffi:foreign-array-to-lisp (pzmq:msg-data msg)
-                              `(:array :uint8 ,(pzmq:msg-size msg))))
+  (flet ((copy-foreign-bytes (pointer len)
+           (let ((lisp-vector (cffi:make-shareable-byte-vector len)))
+             (cffi:with-pointer-to-vector-data (vec-ptr lisp-vector)
+               (cffi:foreign-funcall "memcpy" :pointer vec-ptr :pointer pointer :size len :pointer)
+               lisp-vector))))
+    (copy-foreign-bytes (pzmq:msg-data msg) (pzmq:msg-size msg))))
 
 (defun global-function-p (symbol)
   "Return true if SYMBOL is a symbol naming a global function. Return false otherwise."
